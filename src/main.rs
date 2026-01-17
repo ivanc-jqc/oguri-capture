@@ -22,7 +22,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     //&("my-app", 0u32, "dialog-information", "A summary", "Some body",
     //vec![""; 0], HashMap::<&str, &Value>::new(), 5000),
     let binding = n.body();
-    let reply: ObjectPath = binding.deserialize().unwrap();
+    let deserialized_obj: ObjectPath = binding.deserialize::<ObjectPath>().unwrap();
+    let reply: &str = deserialized_obj.as_str();
     dbg!(reply);
     Ok(())
 }
