@@ -1,0 +1,25 @@
+to open a session
+busctl --user call \
+        org.freedesktop.portal.Desktop \
+        /org/freedesktop/portal/desktop \
+        org.freedesktop.portal.ScreenCast \
+        CreateSession \
+        a{sv} \
+        1 \
+        session_handle_token s mysession
+    
+busctl call
+SERVICE
+OBJECT_PATH
+INTERFACE
+METHOD
+SIGNATURE
+ARGUMENTS
+
+connection.call_method(
+        Some("org.freedesktop.portal.Desktop"),
+        "/org/freedesktop/portal/desktop",
+        Some("org.freedesktop.portal.ScreenCast"),
+        "CreateSession",
+        &(session_handle_token" "s" "mysession"),
+    ).await?;
