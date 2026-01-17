@@ -7,10 +7,10 @@ use zbus::{zvariant::Value, Connection};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let connection = Connection::session().await?;
-
+    let sesh = Value::new("sesh");
     let args = HashMap::<&str, &Value>::from([
-        ()
-    ])
+        ("session_handle_token", &sesh)
+    ]);
     let m = connection.call_method(
         Some("org.freedesktop.portal.Desktop"),
         "/org/freedesktop/portal/desktop",
@@ -21,7 +21,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     //&("my-app", 0u32, "dialog-information", "A summary", "Some body",
     //vec![""; 0], HashMap::<&str, &Value>::new(), 5000),
-    let reply: u32 = m.body().deserialize().unwrap();
-    dbg!(reply);
+    dbg!(m);
     Ok(())
 }
