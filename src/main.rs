@@ -22,6 +22,14 @@ trait ScreenCast {
     #[allow(non_snake_case)]
     fn AvailableSourceTypes(&self) -> zbus::Result<u32>;
 }
+#[proxy(
+    interface = "org.freedesktop.portal.Request",
+    default_service = "org.freedesktop.portal.Desktop",
+    default_path = "/org/freedesktop/portal/desktop"
+)]
+trait Listener {
+
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
