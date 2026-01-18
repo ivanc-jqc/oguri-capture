@@ -23,3 +23,20 @@ connection.call_method(
         "CreateSession",
         &(session_handle_token" "s" "mysession"),
     ).await?;
+
+
+
+        // let n = connection.call_method(
+    //     Some("org.freedesktop.portal.Desktop"),
+    //     "/org/freedesktop/portal/desktop",
+    //     Some("org.freedesktop.portal.ScreenCast"),
+    //     "CreateSession",
+    //     &(args),
+    // ).await?;
+    // &("my-app", 0u32, "dialog-information", "A summary", "Some body",
+    // vec![""; 0], HashMap::<&str, &Value>::new(), 5000),
+
+        // let binding = n.body();
+    // let deserialized_obj: ObjectPath = binding.deserialize::<ObjectPath>().unwrap();
+    // let reply: &str = deserialized_obj.as_str();
+    // dbg!(reply);

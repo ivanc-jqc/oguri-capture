@@ -3,6 +3,7 @@ use std::error::Error;
 
 use zbus::{zvariant::Value, Connection, proxy};
 use zbus::zvariant::OwnedObjectPath;
+use zbus::zvariant::OwnedValue;
 #[proxy(
     interface = "org.freedesktop.portal.ScreenCast",
     default_service = "org.freedesktop.portal.Desktop",
@@ -11,10 +12,17 @@ use zbus::zvariant::OwnedObjectPath;
 trait ScreenCast {
     fn CreateSession (&self,
         options: &HashMap::<&str, Value<'_>>,
-    ) -> zbus::Result<OwnedObjectPath>; 
+    ) -> zbus::Result<OwnedObjectPath>; //ObjectPath doesnt support lifetimes
+    fn Start (&self,
+        session_handle: OwnedObjectPath,
+        app_id: &str,
+        options: &HashMap::<&str, Value<'_>>,
+    ) -> zbus::Result<Vec<(u32, HashMap<String,OwnedValue>)>>;
+    #[zbus(property)]
+    #[allow(non_snake_case)]
+    fn AvailableSourceTypes(&self) -> zbus::Result<u32>;
 }
 
-// Although we use `tokio` here, you can use any async runtime of choice.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let connection = Connection::session().await?;
@@ -26,20 +34,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let n = proxy.CreateSession(
         &args
     ).await?;
-    // let n = connection.call_method(
-    //     Some("org.freedesktop.portal.Desktop"),
-    //     "/org/freedesktop/portal/desktop",
-    //     Some("org.freedesktop.portal.ScreenCast"),
-    //     "CreateSession",
-    //     &(args),
-    // ).await?;
-    // &("my-app", 0u32, "dialog-information", "A summary", "Some body",
-    // vec![""; 0], HashMap::<&str, &Value>::new(), 5000),
+
     
-    dbg!(&n.as_str());
-    // let binding = n.body();
-    // let deserialized_obj: ObjectPath = binding.deserialize::<ObjectPath>().unwrap();
-    // let reply: &str = deserialized_obj.as_str();
-    // dbg!(reply);
+    // let props = proxy.AvailableSourceTypes().await?;
+    // let start = proxy.Start(
+    //     n,
+    //     "ble",
+    //     &args
+
+    // ).await?;
+
+
+    dbg!(n);
+
     Ok(())
 }
