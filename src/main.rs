@@ -28,7 +28,12 @@ trait ScreenCast {
     default_path = "/org/freedesktop/portal/desktop"
 )]
 trait Listener {
-
+    #[zbus(signal)]
+    fn Response (
+        &self,
+        response: u32,
+        results: HashMap::<&str, Value<'_>>
+    ) -> Result<()>;
 }
 
 #[tokio::main]

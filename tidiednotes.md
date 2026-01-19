@@ -21,3 +21,10 @@
       <arg type="o" name="handle" direction="out"/>
     </method>
 ```
+## Common DBus types and their rust equivalents
+- `u` - int (u32)
+- `o` - (Owned)ObjectPath - looks like `/org/freedesktop/portal/desktop`
+- `a{}` - hashmap
+- `s` - string
+- `v` - variant - zvariant::Value 
+- `a{sv}` - hashmap with string as key and variant as value: `HashMap::<&str, Value>`
