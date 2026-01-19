@@ -22,19 +22,7 @@ trait ScreenCast {
     #[allow(non_snake_case)]
     fn AvailableSourceTypes(&self) -> zbus::Result<u32>;
 }
-#[proxy(
-    interface = "org.freedesktop.portal.Request",
-    default_service = "org.freedesktop.portal.Desktop",
-    default_path = "/org/freedesktop/portal/desktop"
-)]
-trait Listener {
-    #[zbus(signal)]
-    fn response (
-        &self,
-        response: u32,
-        results: HashMap::<&str, Value<'_>>
-    ) -> Result<()>;
-}
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -51,13 +39,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let listener_proxy = Proxy::new(
         &connection,
-        "org.freedesktop.systemd1",
-        "/org/freedesktop/systemd1",
-        "org.freedesktop.systemd1.Manager",
+        "org.freedesktop.portal.Desktop",
+        response_path,
+        "org.freedesktop.portal.Request",
     ).await?;
-    dbg!(response_path);
-    let mut response_stream = listener_proxy.receive_signal("Response").await?;
-    let msg = response_stream.next().await;
+
+    println!("{}", response_path);
+    let mut response_stream = listener_proxy.receive_all_signals().await?;
+    while let Some(msg) = response_stream.next().await {
+        println!("Received signal: {:?}", msg);
+    }
 
 
     // let props = proxy.AvailableSourceTypes().await?;
@@ -69,7 +60,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // ).await?;
 
 
-    dbg!(msg);
 
     Ok(())
 }
