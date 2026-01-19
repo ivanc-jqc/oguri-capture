@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::error::Error;
-
-use zbus::{zvariant::Value, Connection, proxy};
+use futures_util::stream::StreamExt;
+use zbus::{zvariant::Value, Connection, proxy, Proxy};
 use zbus::zvariant::OwnedObjectPath;
 use zbus::zvariant::OwnedValue;
 #[proxy(
@@ -29,7 +29,7 @@ trait ScreenCast {
 )]
 trait Listener {
     #[zbus(signal)]
-    fn Response (
+    fn response (
         &self,
         response: u32,
         results: HashMap::<&str, Value<'_>>
@@ -40,15 +40,26 @@ trait Listener {
 async fn main() -> Result<(), Box<dyn Error>> {
     let connection = Connection::session().await?;
     let args = HashMap::<&str, Value>::from([
-        ("session_handle_token", Value::new("sesh"))
+        ("session_handle_token", Value::new("oguri"))
     ]);
 
     let proxy = ScreenCastProxy::new(&connection).await?;
     let n = proxy.CreateSession(
         &args
     ).await?;
+    let response_path: &str = &n.as_str();
 
-    
+    let listener_proxy = Proxy::new(
+        &connection,
+        "org.freedesktop.systemd1",
+        "/org/freedesktop/systemd1",
+        "org.freedesktop.systemd1.Manager",
+    ).await?;
+    dbg!(response_path);
+    let mut response_stream = listener_proxy.receive_signal("Response").await?;
+    let msg = response_stream.next().await;
+
+
     // let props = proxy.AvailableSourceTypes().await?;
     // let start = proxy.Start(
     //     n,
@@ -58,7 +69,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // ).await?;
 
 
-    dbg!(n);
+    dbg!(msg);
 
     Ok(())
 }
