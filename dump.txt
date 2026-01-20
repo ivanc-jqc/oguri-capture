@@ -17,3 +17,16 @@ while let Some(msg) = response_stream.next().await {
     let temp3: HashMap<String, Value> = HashMap::<String, Value>::try_from(temp2).unwrap();
     dbg!(temp3);
 }
+
+
+// while let Some(msg) = response_stream.next().await {
+//     let temp = msg.body();
+//     let temp2: Dict = temp.deserialize::<Structure>()
+//     .unwrap()
+//     .into_fields()[1]
+//     .clone()
+//     .downcast()
+//     .unwrap();
+//     let temp3: HashMap<String, Value> = HashMap::<String, Value>::try_from(temp2).unwrap();
+//     dbg!(temp3);
+// }
