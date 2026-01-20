@@ -37,7 +37,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = HashMap::<&str, Value>::from([
         ("session_handle_token", Value::new(SESSION_HANDLE_TOKEN))
     ]);
-
+    
+    // returns objpath /org/freedesktop/portal/desktop/session/{ID}/oguri
     let proxy = ScreenCastProxy::new(&connection).await?;
     let n = proxy.CreateSession(
         &args
