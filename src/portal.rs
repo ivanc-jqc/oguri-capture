@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::error::Error;
+
 use zbus::proxy::SignalStream;
 use zbus::{Connection, Proxy, proxy};
-use zbus::zvariant::{Value, ObjectPath, OwnedObjectPath};
+use zbus::zvariant::{Value, ObjectPath, OwnedObjectPath, OwnedFd};
 
 #[proxy(
     interface = "org.freedesktop.portal.ScreenCast",
@@ -23,6 +24,13 @@ pub trait ScreenCast {
         parent_window: &str,
         options: &HashMap::<&str, Value<'_>>,
     ) -> zbus::Result<OwnedObjectPath>;
+
+    fn OpenPipeWireRemote (&self,
+        session_handle: &ObjectPath<'_>,
+        parent_window: &str,
+        options: &HashMap::<&str, Value<'_>>,
+    ) -> zbus::Result<OwnedFd>;
+
     #[zbus(property)]
     #[allow(non_snake_case)]
     fn AvailableSourceTypes(&self) -> zbus::Result<u32>;
