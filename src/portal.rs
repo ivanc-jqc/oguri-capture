@@ -11,9 +11,11 @@ use zbus::zvariant::{Value, ObjectPath, OwnedObjectPath, OwnedFd};
     default_path = "/org/freedesktop/portal/desktop"
 )]
 pub trait ScreenCast {
+    
     fn CreateSession (&self,
         options: &HashMap::<&str, Value<'_>>,
     ) -> zbus::Result<OwnedObjectPath>; //ObjectPath doesnt support lifetimes
+
     fn SelectSources (&self,
         session_handle: &ObjectPath<'_>,
         options: &HashMap::<&str, Value<'_>>,
