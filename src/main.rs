@@ -49,7 +49,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 sender_id + 
                 "/" + 
                 SESSION_HANDLE_TOKEN)? ;
-
+    //ENUM PLEASE
     let args = HashMap::from([
             ("handle_token", Value::new("bruh")),
             ("types", Value::new(1u32)),
@@ -57,6 +57,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             ("cursor_mode", Value::new(2u32)),
             ("persist_mode", Value::new(1u32))
         ]);
+
+    // returns objpath "/org/freedesktop/portal/desktop/request/{ID}/bruh"
     let o = proxy.SelectSources(
         &session_handle,
         &args,
