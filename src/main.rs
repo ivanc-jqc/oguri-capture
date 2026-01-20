@@ -1,33 +1,11 @@
 use std::collections::HashMap;
 use std::error::Error;
-use zbus::{Connection, proxy};
-use zbus::zvariant::{Value, ObjectPath, OwnedObjectPath, OwnedValue};
-use std::{thread, time::Duration};
-
-#[proxy(
-    interface = "org.freedesktop.portal.ScreenCast",
-    default_service = "org.freedesktop.portal.Desktop",
-    default_path = "/org/freedesktop/portal/desktop"
-)]
-trait ScreenCast {
-    fn CreateSession (&self,
-        options: &HashMap::<&str, Value<'_>>,
-    ) -> zbus::Result<OwnedObjectPath>; //ObjectPath doesnt support lifetimes
-    fn SelectSources (&self,
-        session_handle: &ObjectPath<'_>,
-        options: &HashMap::<&str, Value<'_>>,
-    ) -> zbus::Result<OwnedObjectPath>;
-    
-    fn Start (&self,
-        session_handle: &ObjectPath<'_>,
-        parent_window: &str,
-        options: &HashMap::<&str, Value<'_>>,
-    ) -> zbus::Result<OwnedObjectPath>;
-    #[zbus(property)]
-    #[allow(non_snake_case)]
-    fn AvailableSourceTypes(&self) -> zbus::Result<u32>;
-}
-
+use zbus::{Connection, Proxy};
+use zbus::zvariant::{ObjectPath, Structure, Value};
+use portal::ScreenCastProxy;
+use futures_util::stream::StreamExt;
+use zbus::proxy::SignalStream;
+use std::{thread,time};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -43,14 +21,58 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let n = proxy.CreateSession(
         &args
     ).await?;
-    
 
-    let sender_id: &str = &n.as_str().split("/").nth(6).unwrap();
+  let sender_id: &str = &n.as_str().split("/").nth(6).unwrap();
     let session_handle = ObjectPath::try_from(String::from("/org/freedesktop/portal/desktop/session/") + 
                 sender_id + 
                 "/" + 
                 SESSION_HANDLE_TOKEN)? ;
-    //ENUM PLEASE
+
+
+// while let Some(msg) = response_stream.next().await {
+//     let temp = msg.body();
+//     let temp2: Dict = temp.deserialize::<Structure>()
+//     .unwrap()
+//     .into_fields()[1]
+//     .clone()
+//     .downcast()
+//     .unwrap();
+//     let temp3: HashMap<String, Value> = HashMap::<String, Value>::try_from(temp2).unwrap();
+//     dbg!(temp3);
+// }
+    async fn listener_stream<'a>(connection: &'a Connection,sender_id: &str) -> Result<SignalStream<'a>,Box<dyn Error>> {
+        let concatenated = String::from("/org/freedesktop/portal/desktop/request/")+sender_id+"/"+SESSION_HANDLE_TOKEN;
+        let listener_proxy = Proxy::new(
+            connection,
+            "org.freedesktop.portal.Desktop",
+            concatenated,
+            "org.freedesktop.portal.Request",
+        ).await?;
+        let response_stream= listener_proxy.receive_all_signals().await?;
+
+        Ok(response_stream)
+    }
+    let mut stream = listener_stream(&connection, &sender_id).await?;
+    
+
+
+
+
+
+
+
+
+  
+    
+    
+    
+    
+    
+    
+    
+    
+    
+                //ENUM PLEASE
     let args = HashMap::from([
             ("handle_token", Value::new("oguri")),
             // ("types", Value::new(1u32)),
@@ -60,40 +82,36 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ]);
 
     // returns objpath "/org/freedesktop/portal/desktop/request/{ID}/oguri"
-    let o = proxy.SelectSources(
+    proxy.SelectSources(
         &session_handle,
         &args,
     ).await?;
-
+   
+    
     let args = HashMap::from([
             ("handle_token", Value::new("oguri"))
         ]);
-    thread::sleep_ms(5000);
-    // "/org/freedesktop/portal/desktop/request/{ID}/oguri"
-    let p = proxy.Start(
+    stream.next().await;
+    proxy.Start(
         &session_handle,
         "",
         &args,
     ).await?;
+    while let Some(msg) = stream.next().await {
+        let body = msg.body();
+        let parsed = body.deserialize::<Structure>().unwrap();
+        dbg!(parsed);
+    }
+
+    // "/org/freedesktop/portal/desktop/request/{ID}/oguri"
 
 
 
-    dbg!(p);
+
    
-   
-    // /org/freedesktop/portal/desktop/session/1_186/oguri
-
-    // let props = proxy.AvailableSourceTypes().await?;
-    // let start = proxy.Start(
-    //     n,
-    //     "ble",
-    //     &args
-
-    // ).await?;
-
 
 
     Ok(())
 }
 
-
+mod portal;
