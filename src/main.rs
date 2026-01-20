@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use zbus::{Connection, proxy};
 use zbus::zvariant::{Value, ObjectPath, OwnedObjectPath, OwnedValue};
-
+use std::{thread, time::Duration};
 
 #[proxy(
     interface = "org.freedesktop.portal.ScreenCast",
@@ -19,10 +19,10 @@ trait ScreenCast {
     ) -> zbus::Result<OwnedObjectPath>;
     
     fn Start (&self,
-        session_handle: OwnedObjectPath,
-        app_id: &str,
+        session_handle: &ObjectPath<'_>,
+        parent_window: &str,
         options: &HashMap::<&str, Value<'_>>,
-    ) -> zbus::Result<Vec<(u32, HashMap<String,OwnedValue>)>>;
+    ) -> zbus::Result<OwnedObjectPath>;
     #[zbus(property)]
     #[allow(non_snake_case)]
     fn AvailableSourceTypes(&self) -> zbus::Result<u32>;
@@ -52,23 +52,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 SESSION_HANDLE_TOKEN)? ;
     //ENUM PLEASE
     let args = HashMap::from([
-            ("handle_token", Value::new("bruh")),
-            ("types", Value::new(1u32)),
-            ("multiple", Value::new(false)),
-            ("cursor_mode", Value::new(2u32)),
-            ("persist_mode", Value::new(1u32))
+            ("handle_token", Value::new("oguri")),
+            // ("types", Value::new(1u32)),
+            // ("multiple", Value::new(false)),
+            // ("cursor_mode", Value::new(2u32)),
+            // ("persist_mode", Value::new(1u32))
         ]);
 
-    // returns objpath "/org/freedesktop/portal/desktop/request/{ID}/bruh"
+    // returns objpath "/org/freedesktop/portal/desktop/request/{ID}/oguri"
     let o = proxy.SelectSources(
         &session_handle,
         &args,
     ).await?;
 
+    let args = HashMap::from([
+            ("handle_token", Value::new("oguri"))
+        ]);
+    thread::sleep_ms(5000);
+    // "/org/freedesktop/portal/desktop/request/{ID}/oguri"
+    let p = proxy.Start(
+        &session_handle,
+        "",
+        &args,
+    ).await?;
 
 
 
-    dbg!(o);
+    dbg!(p);
    
    
     // /org/freedesktop/portal/desktop/session/1_186/oguri
