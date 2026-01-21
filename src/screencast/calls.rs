@@ -1,9 +1,6 @@
 use std::collections::HashMap;
-use std::error::Error;
-
-use zbus::proxy::SignalStream;
 use zbus::zvariant::{ObjectPath, OwnedFd, OwnedObjectPath, Value};
-use zbus::{Connection, Proxy, proxy};
+use zbus::proxy;
 
 #[proxy(
     interface = "org.freedesktop.portal.ScreenCast",
@@ -35,22 +32,4 @@ pub trait ScreenCast {
     #[zbus(property)]
     #[allow(non_snake_case)]
     fn AvailableSourceTypes(&self) -> zbus::Result<u32>;
-}
-pub async fn listener_stream<'a>(
-    connection: &'a Connection,
-    sender_id: &str,
-    handle_token: &str,
-) -> Result<SignalStream<'a>, Box<dyn Error>> {
-    let concatenated =
-        String::from("/org/freedesktop/portal/desktop/request/") + sender_id + "/" + handle_token;
-    let listener_proxy = Proxy::new(
-        connection,
-        "org.freedesktop.portal.Desktop",
-        concatenated,
-        "org.freedesktop.portal.Request",
-    )
-    .await?;
-    let response_stream = listener_proxy.receive_all_signals().await?;
-
-    Ok(response_stream)
 }

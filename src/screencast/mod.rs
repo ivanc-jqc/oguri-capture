@@ -1,12 +1,14 @@
-use futures_util::stream::StreamExt;
-use portal::*;
+use calls::*;
 use std::collections::HashMap;
 use std::error::Error;
 use zbus::Connection;
-use zbus::blocking::proxy;
-use zbus::zvariant::{ObjectPath, OwnedFd, OwnedObjectPath, Structure, Value};
+use zbus::zvariant::{ObjectPath, OwnedFd, OwnedObjectPath, Value};
+
+
 pub const SESSION_HANDLE_TOKEN: &str = "oguri";
 pub const XDG_SESSION_PATH: &str = "/org/freedesktop/portal/desktop/session/";
+
+
 pub struct ScreenCastSession<'oguri> {
     pub connection: &'oguri Connection,
     pub sender_id: String,
@@ -48,8 +50,7 @@ impl<'oguri> ScreenCastSession<'oguri> {
             // ("cursor_mode", Value::new(2u32)),
             // ("persist_mode", Value::new(1u32))
         ]);
-        dbg!(&self.session_handle);
-
+        
         Ok(self
             .proxy
             .SelectSources(&self.session_handle, &args)
@@ -69,4 +70,7 @@ impl<'oguri> ScreenCastSession<'oguri> {
             .await?)
     }
 }
-pub mod portal;
+
+
+pub mod calls;
+pub mod signals;
