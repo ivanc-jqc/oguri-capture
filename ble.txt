@@ -1,0 +1,127 @@
+[src/main.rs:20:5] parse_message(pw_streams) = {
+    "streams": OwnedValue(
+        Array(
+            Array {
+                elements: [
+                    Structure(
+                        Structure {
+                            fields: [
+                                U32(
+                                    84,
+                                ),
+                                Dict(
+                                    Dict {
+                                        map: {
+                                            Str(
+                                                "position",
+                                            ): Value(
+                                                Structure(
+                                                    Structure {
+                                                        fields: [
+                                                            I32(
+                                                                0,
+                                                            ),
+                                                            I32(
+                                                                0,
+                                                            ),
+                                                        ],
+                                                        signature: Structure(
+                                                            Dynamic {
+                                                                fields: [
+                                                                    I32,
+                                                                    I32,
+                                                                ],
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                            ),
+                                            Str(
+                                                "size",
+                                            ): Value(
+                                                Structure(
+                                                    Structure {
+                                                        fields: [
+                                                            I32(
+                                                                1920,
+                                                            ),
+                                                            I32(
+                                                                1080,
+                                                            ),
+                                                        ],
+                                                        signature: Structure(
+                                                            Dynamic {
+                                                                fields: [
+                                                                    I32,
+                                                                    I32,
+                                                                ],
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                            ),
+                                            Str(
+                                                "source_type",
+                                            ): Value(
+                                                U32(
+                                                    2,
+                                                ),
+                                            ),
+                                        },
+                                        signature: Dict {
+                                            key: Dynamic {
+                                                child: Str,
+                                            },
+                                            value: Dynamic {
+                                                child: Variant,
+                                            },
+                                        },
+                                    },
+                                ),
+                            ],
+                            signature: Structure(
+                                Dynamic {
+                                    fields: [
+                                        U32,
+                                        Dict {
+                                            key: Dynamic {
+                                                child: Str,
+                                            },
+                                            value: Dynamic {
+                                                child: Variant,
+                                            },
+                                        },
+                                    ],
+                                },
+                            ),
+                        },
+                    ),
+                ],
+                signature: Array(
+                    Dynamic {
+                        child: Structure(
+                            Dynamic {
+                                fields: [
+                                    U32,
+                                    Dict {
+                                        key: Dynamic {
+                                            child: Str,
+                                        },
+                                        value: Dynamic {
+                                            child: Variant,
+                                        },
+                                    },
+                                ],
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+    ),
+    "source_type": OwnedValue(
+        U32(
+            2,
+        ),
+    ),
+}
