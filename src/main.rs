@@ -29,11 +29,14 @@ fn parse_message(message: Message) -> HashMap<String, OwnedValue> {
     message.body().deserialize::<(u32, HashMap<String, OwnedValue> )>().unwrap().1
 }   
 //holy fuck.. this function is so bad
-fn parse_streams<'a>(unparsed_streams: &'a HashMap<String,OwnedValue>){
+fn parse_streams<'a>(unparsed_streams: &'a HashMap<String,OwnedValue>) -> u32{
     let lookup = String::from("streams");
     let streams = unparsed_streams[&lookup].downcast_ref::<&Array>().unwrap();
     let main_stream = streams.get::<Structure>(0).unwrap().unwrap(); //HOLY SHIT THIS IS BAD!!!
-    dbg!(main_stream);
+    let fields = main_stream.fields();
+    // dbg!(fields);
+    let pw_node_id = fields[0].downcast_ref::<u32>().unwrap();
+    pw_node_id
 }
 
 // struct StreamInfo {
