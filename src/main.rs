@@ -34,12 +34,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .add_listener_local()
     .global(|global| {
         println!("object: id:{} type:{}/{}", global.id, global.type_, global.version);
+        if let Some(props) = &global.props {
+                for (k, v) in props.iter() {
+                    println!("  {} = {}", k, v);
+                }
+            }
     })
     .register();
     let pw_stream = StreamBox::new(&core, "oguri-capture", props)?;
 
-    
-let mut audio_info = AudioInfoRaw::new();
+    dbg!(&node_id);
+    let mut audio_info = AudioInfoRaw::new();
     audio_info.set_format(AudioFormat::F32P);
 
 
