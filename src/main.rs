@@ -4,7 +4,7 @@ use screencast::signals::listener_stream;
 use zbus::{Connection, Message, message, zvariant::{ Array, Dict, OwnedValue, Value, DeserializeDict}};
 use futures_util::stream::StreamExt;
 use zbus::zvariant::Structure;
-use pipewire::{main_loop::MainLoopBox, context::ContextBox};
+use pipewire::{context::ContextBox, main_loop::MainLoopBox, properties::PropertiesBox, registry::GlobalObject, stream::{Stream, StreamBox}};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -13,16 +13,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     
     
     sc.select_sources().await?;
-    let mut stream = listener_stream(&connection, &sc.sender_id).await?;
-    stream.next().await.unwrap();
+    let mut sc_stream = listener_stream(&connection, &sc.sender_id).await?;
+    sc_stream.next().await.unwrap();
     sc.start().await?;
-    let pw_streams = stream.next().await.unwrap();
+    let pw_streams = sc_stream.next().await.unwrap();
     let pw_fd: OwnedFd = sc.get_pipewire_fd().await?.into();
 
-    dbg!(&pw_fd);
     // let fd = get_pipewire_fd().await?;
     let results = parse_message(pw_streams);
-    parse_streams(&results);
+    let node_id = parse_streams(&results);
 
 
     let mainloop = MainLoopBox::new(None)?;
@@ -30,8 +29,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let core = context.connect_fd(pw_fd,None)?;
     let registry = core.get_registry()?;
-
-
+    let props = PropertiesBox::new();
+    let _listener = registry
+    .add_listener_local()
+    .global(|global| {
+        println!("object: id:{} type:{}/{}", global.id, global.type_, global.version);
+    })
+    .register();
+    let pw_stream = StreamBox::new(&core, "oguri-capture", props)?;
     mainloop.run();
     
     Ok(())
