@@ -4,7 +4,7 @@ use screencast::signals::listener_stream;
 use zbus::{Connection, Message, message, zvariant::{ Array, Dict, OwnedValue, Value, DeserializeDict}};
 use futures_util::stream::StreamExt;
 use zbus::zvariant::Structure;
-use pipewire::{context::ContextBox, main_loop::MainLoopBox, properties::PropertiesBox, registry::GlobalObject, stream::{Stream, StreamBox}};
+use pipewire::{context::ContextBox, main_loop::MainLoopBox, properties::PropertiesBox, registry::GlobalObject, spa::utils::Direction, stream::{Stream, StreamBox, StreamFlags}};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -37,6 +37,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     })
     .register();
     let pw_stream = StreamBox::new(&core, "oguri-capture", props)?;
+
+    
+    pw_stream.connect(Direction::Output, Some(node_id), StreamFlags::AUTOCONNECT.union(StreamFlags::MAP_BUFFERS), params)?;
     mainloop.run();
     
     Ok(())
