@@ -4,7 +4,7 @@ use screencast::signals::listener_stream;
 use zbus::{Connection, Message, message, zvariant::{ Array, Dict, OwnedValue, Value, DeserializeDict}};
 use futures_util::stream::StreamExt;
 use zbus::zvariant::Structure;
-use pipewire::{context::ContextBox, main_loop::MainLoopBox, properties::PropertiesBox, registry::GlobalObject, spa::utils::Direction, stream::{Stream, StreamBox, StreamFlags}};
+use pipewire::{context::ContextBox, main_loop::MainLoopBox, properties::PropertiesBox, registry::GlobalObject, spa::{param::{self, ParamType, audio::{AudioFormat, AudioInfoRaw}}, pod::{Object, Pod}, utils::Direction}, stream::{Stream, StreamBox, StreamFlags}};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -39,7 +39,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let pw_stream = StreamBox::new(&core, "oguri-capture", props)?;
 
     
-    pw_stream.connect(Direction::Output, Some(node_id), StreamFlags::AUTOCONNECT.union(StreamFlags::MAP_BUFFERS), params)?;
+let mut audio_info = AudioInfoRaw::new();
+    audio_info.set_format(AudioFormat::F32P);
+
+
+ 
+    let pod_object = Object {
+        type_: pipewire::spa::utils::SpaTypes::ObjectParamFormat.as_raw(),
+        id: ParamType::EnumFormat.as_raw(),
+        properties: audio_info.into(),
+    };
+
+
+     let values: Vec<u8> =
+        pipewire::spa::pod::serialize::PodSerializer::serialize(
+            std::io::Cursor::new(Vec::new()),
+            &pipewire::spa::pod::Value::Object(pod_object),
+        )
+        .ok().unwrap()
+        .0
+        .into_inner();
+
+
+
+    let mut params = [Pod::from_bytes(&values).unwrap()];
+
+
+    pw_stream.connect(Direction::Output, Some(node_id), StreamFlags::AUTOCONNECT.union(StreamFlags::MAP_BUFFERS),&mut params)?;
     mainloop.run();
     
     Ok(())
