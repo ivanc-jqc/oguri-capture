@@ -34,8 +34,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mainloop = MainLoopBox::new(None)?;
     let context = ContextBox::new(&mainloop.loop_(), None)?;
 
-    // let core = context.connect_fd(pw_fd,None)?;
-    let core = context.connect(None)?;
+    let core = context.connect_fd(pw_fd,None)?;
+    // let core = context.connect(None)?;
     let registry = core.get_registry()?;
     
 
@@ -61,6 +61,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let pw_stream = StreamBox::new(&core, "oguri-capture", props)?;
     let strem = pw_stream
     .add_local_listener_with_user_data(data)
+    .param_changed(|stream, user_data,id, param |{
+        let Some(param) = param else {
+            return;
+        };
+        dbg!(user_data);
+        dbg!(id);
+
+
+    })
+    
+    
+    
+    
+    
+    
+    
     .process(|stream, acc| match stream.dequeue_buffer() {
             None => println!("No buffer received"),
             Some(mut buffer) => {
