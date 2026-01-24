@@ -4,8 +4,8 @@ use screencast::signals::listener_stream;
 use zbus::{Connection, Message, message, zvariant::{ Array, Dict, OwnedValue, Value, DeserializeDict}};
 use futures_util::stream::StreamExt;
 use zbus::zvariant::Structure;
-use pipewire::{context::ContextBox, main_loop::MainLoopBox, properties::PropertiesBox, registry::GlobalObject, spa::{param::{self, ParamType, audio::{AudioFormat, AudioInfoRaw}}, pod::{Object, Pod}, utils::Direction}, stream::{Stream, StreamBox, StreamFlags}};
-
+use pipewire::{context::ContextBox, main_loop::MainLoopBox, properties::PropertiesBox, registry::GlobalObject, spa::{param::{self, ParamType, audio::{AudioFormat, AudioInfoRaw}}, pod::{Object, Pod}, utils::Direction}, stream::{Stream, StreamBox, StreamFlags}, sys::PW_KEY_MEDIA_TYPE};
+use pipewire::{properties::{properties}};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let connection = Connection::session().await?;
@@ -29,7 +29,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let core = context.connect_fd(pw_fd,None)?;
     let registry = core.get_registry()?;
-    let props = PropertiesBox::new();
+    let props = properties!{
+        "PW_KEY_MEDIA_TYPE" => "Audio",
+        "PW_KEY_MEDIA_CATEGORY" => "Playback",
+        "PW_KEY_MEDIA_ROLE" => "Music"
+    };
+
     let _listener = registry
     .add_listener_local()
     .global(|global| {
