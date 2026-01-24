@@ -34,13 +34,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mainloop = MainLoopBox::new(None)?;
     let context = ContextBox::new(&mainloop.loop_(), None)?;
 
-    let core = context.connect_fd(pw_fd,None)?;
+    // let core = context.connect_fd(pw_fd,None)?;
+    let core = context.connect(None)?;
     let registry = core.get_registry()?;
-    let props = properties!{
-        "PW_KEY_MEDIA_TYPE" => "Audio",
-        "PW_KEY_MEDIA_CATEGORY" => "Playback",
-        "PW_KEY_MEDIA_ROLE" => "Music"
-    };
+    
 
     let _listener = registry
     .add_listener_local()
@@ -55,6 +52,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .register();
 
     let data: f64 = 0.0;
+    let props = properties!{
+        "PW_KEY_MEDIA_TYPE" => "Audio",
+        "PW_KEY_MEDIA_CATEGORY" => "Playback",
+        "PW_KEY_MEDIA_ROLE" => "Music",
+        "PW_KEY_AUDIO_CHANNELS" => "2"
+    };
     let pw_stream = StreamBox::new(&core, "oguri-capture", props)?;
     let strem = pw_stream
     .add_local_listener_with_user_data(data)
@@ -94,9 +97,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     
     dbg!(&node_id);
     let mut audio_info = AudioInfoRaw::new();
-    audio_info.set_format(AudioFormat::F32P);
-
-
+    audio_info.set_format(AudioFormat::S16LE);
+    audio_info.set_rate(DEFAULT_RATE);
+    audio_info.set_channels(DEFAULT_CHANNELS);
+    let mut position = [0; pipewire::spa::param::audio::MAX_CHANNELS];
+    position[0] = libspa_sys::SPA_AUDIO_CHANNEL_FL;
+    position[1] = libspa_sys::SPA_AUDIO_CHANNEL_FR;
+    audio_info.set_position(position);
  
     let pod_object = Object {
         type_: pipewire::spa::utils::SpaTypes::ObjectParamFormat.as_raw(),
@@ -119,7 +126,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut params = [Pod::from_bytes(&values).unwrap()];
 
 
-    pw_stream.connect(Direction::Output, Some(node_id), StreamFlags::AUTOCONNECT.union(StreamFlags::MAP_BUFFERS),&mut params)?;
+    pw_stream.connect(Direction::Output, None, StreamFlags::AUTOCONNECT |StreamFlags::MAP_BUFFERS 
+        | StreamFlags::RT_PROCESS
+        ,&mut params)?;
     mainloop.run();
     
     Ok(())
