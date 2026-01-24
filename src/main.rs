@@ -1,10 +1,10 @@
-use std::{any, collections::HashMap, error::Error, hash::Hash, os::fd::OwnedFd};
+use std::{any, collections::HashMap, error::Error, hash::Hash, os::{fd::OwnedFd, unix::process}};
 use screencast::ScreenCastSession;
 use screencast::signals::listener_stream;
 use zbus::{Connection, Message, message, zvariant::{ Array, Dict, OwnedValue, Value, DeserializeDict}};
 use futures_util::stream::StreamExt;
 use zbus::zvariant::Structure;
-use pipewire::{context::ContextBox, main_loop::MainLoopBox, properties::PropertiesBox, registry::GlobalObject, spa::{param::{self, ParamType, audio::{AudioFormat, AudioInfoRaw}}, pod::{Object, Pod}, utils::Direction}, stream::{Stream, StreamBox, StreamFlags}, sys::PW_KEY_MEDIA_TYPE};
+use pipewire::{context::ContextBox, main_loop::MainLoopBox, properties::PropertiesBox, registry::GlobalObject, spa::{param::{self, ParamType, audio::{AudioFormat, AudioInfoRaw}}, pod::{Object, Pod}, sys::spa_callbacks, utils::Direction}, stream::{Stream, StreamBox, StreamFlags}, sys::PW_KEY_MEDIA_TYPE};
 use pipewire::{properties::{properties}};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -46,8 +46,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
     })
     .register();
-    let pw_stream = StreamBox::new(&core, "oguri-capture", props)?;
 
+
+    fn stream_callback() {
+
+    }
+    let pw_stream = StreamBox::new(&core, "oguri-capture", props)?;
+    let strem = pw_stream
+    .add_local_listener()
+    .process(move |stream|{
+
+        }
+        
+    )
+    ;
+    
     dbg!(&node_id);
     let mut audio_info = AudioInfoRaw::new();
     audio_info.set_format(AudioFormat::F32P);
