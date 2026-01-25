@@ -20,10 +20,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     sc.start().await?;
     let pw_streams = sc_stream.next().await.unwrap();
     let pw_fd: OwnedFd = sc.get_pipewire_fd().await?.into();
-
-    // let fd = get_pipewire_fd().await?;
-    let results = parse_message(pw_streams);
-    let node_id = parse_streams(&results);
+    let node_id = parse_streams(&(parse_message(pw_streams)));
 
 
    
@@ -40,15 +37,9 @@ fn parse_streams<'a>(unparsed_streams: &'a HashMap<String,OwnedValue>) -> u32{
     let streams = unparsed_streams[&lookup].downcast_ref::<&Array>().unwrap();
     let main_stream = streams.get::<Structure>(0).unwrap().unwrap(); //HOLY SHIT THIS IS BAD!!!
     let fields = main_stream.fields();
-    // dbg!(fields);
     let pw_node_id = fields[0].downcast_ref::<u32>().unwrap();
     pw_node_id
 }
 
-// struct StreamInfo {
-    
-//     persist_mode: u32,
-//     streams: HashMap<String,OwnedValue>,
-// }
 mod screencast;
 mod pw_handling;
