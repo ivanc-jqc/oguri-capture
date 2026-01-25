@@ -2,8 +2,8 @@ use calls::*;
 use std::collections::HashMap;
 use std::error::Error;
 use zbus::Connection;
-use zbus::zvariant::{ObjectPath, OwnedFd, OwnedObjectPath, Value};
-
+use zbus::zvariant::{ObjectPath, OwnedObjectPath, Value};
+use std::os::fd::OwnedFd;
 
 pub const SESSION_HANDLE_TOKEN: &str = "oguri";
 pub const XDG_SESSION_PATH: &str = "/org/freedesktop/portal/desktop/session/";
@@ -67,7 +67,7 @@ impl<'oguri> ScreenCastSession<'oguri> {
         Ok(self
             .proxy
             .OpenPipeWireRemote(&self.session_handle, &args)
-            .await?)
+            .await?.into())
     }
 }
 

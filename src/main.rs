@@ -19,8 +19,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     sc_stream.next().await.unwrap();
     sc.start().await?;
     let pw_streams = sc_stream.next().await.unwrap();
-    let pw_fd: OwnedFd = sc.get_pipewire_fd().await?.into();
-    let node_id = parse_streams(&(parse_message(pw_streams)));
+    let pw_fd: OwnedFd = sc.get_pipewire_fd().await?;
+    let node_id: u32 = parse_streams(&(parse_message(pw_streams)));
 
 
    
