@@ -70,7 +70,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 let n_frames = if let Some(slice) = data.data() {
                     let n_frames = slice.len() / stride;
                     for i in 0..n_frames {
-                        *acc += PI_2 * 440.0 / DEFAULT_RATE as f64;
+                        *acc += PI_2 * 220.0 / DEFAULT_RATE as f64;
                         if *acc >= PI_2 {
                             *acc -= PI_2
                         }
