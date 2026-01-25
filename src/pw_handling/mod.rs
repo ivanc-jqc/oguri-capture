@@ -1,16 +1,24 @@
 use std::error::Error;
-
-use pipewire::{context::ContextBox, main_loop::MainLoopBox, spa::{param::{self, ParamType, audio::{AudioFormat, AudioInfoRaw}}, pod::{Object, Pod}, sys::spa_callbacks, utils::Direction}, stream::{Stream, StreamBox, StreamFlags}, sys::PW_KEY_MEDIA_TYPE};
+use std::os::fd::OwnedFd;
+use pipewire::{context::ContextBox, main_loop::MainLoopBox, 
+    stream::{Stream, StreamBox, StreamFlags}
+    };
 use pipewire::{properties::{properties}};
+use pipewire::spa::{
+    param::{self, ParamType, audio::{AudioFormat, AudioInfoRaw}},
+    pod::{Object, Pod}, sys::spa_callbacks, utils::Direction};
 
+pub const DEFAULT_RATE: u32 = 44100;
+pub const DEFAULT_CHANNELS: u32 = 2;
+pub const DEFAULT_VOLUME: f64 = 0.7;
+pub const PI_2: f64 = std::f64::consts::PI + std::f64::consts::PI;
+pub const CHAN_SIZE: usize = std::mem::size_of::<i16>();
 
-
-
-pub fn pw_init() -> Result<(), Box<dyn Error>> {
+pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
      let mainloop = MainLoopBox::new(None)?;
     let context = ContextBox::new(&mainloop.loop_(), None)?;
 
-    let core = context.connect_fd(pw_fd,None)?;
+    let core = context.connect_fd(fd,None)?;
     // let core = context.connect(None)?;
     let registry = core.get_registry()?;
     
