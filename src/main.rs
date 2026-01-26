@@ -6,7 +6,7 @@ use futures_util::stream::StreamExt;
 use zbus::{Connection, Message};
 use zbus::zvariant::{Structure,  Array, OwnedValue};
 
-
+use pipewire_capture::pw_init;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -22,8 +22,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let pw_fd: OwnedFd = sc.get_pipewire_fd().await?;
     let node_id: u32 = parse_streams(&(parse_message(pw_streams)));
 
-
-   
+    pw_init(pw_fd);
+    
     
     Ok(())
 }
@@ -42,4 +42,4 @@ fn parse_streams<'a>(unparsed_streams: &'a HashMap<String,OwnedValue>) -> u32{
 }
 
 mod screencast;
-mod pw_handling;
+mod pipewire_capture;
