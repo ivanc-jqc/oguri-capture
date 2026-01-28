@@ -15,15 +15,14 @@ use pipewire::{
 };
 use std::error::Error;
 use std::os::fd::OwnedFd;
-
-pub const DEFAULT_RATE: u32 = 30;
-pub const DEFAULT_CHANNELS: u32 = 2;
+pub const DEFAULT_RATE: u32 = 44100;
+pub const DEFAULT_CHANNELS: u32 = 1;
 pub const DEFAULT_VOLUME: f64 = 1.0;
 pub const PI_2: f64 = std::f64::consts::PI + std::f64::consts::PI;
 pub const CHAN_SIZE: usize = std::mem::size_of::<i16>();
 
 struct VideoData {
-    format: VideoInfoRaw,
+    format: VideoInfoRaw
 }
 
 pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
@@ -41,11 +40,10 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
         "oguri-capture",
         properties! {
             "PW_KEY_MEDIA_TYPE" => "Audio",
-            // "PW_KEY_MEDIA_CATEGORY" => "Capture",
+            "PW_KEY_MEDIA_CATEGORY" => "Capture",
             // "PW_KEY_MEDIA_ROLE" => "Playback"
         },
     )?;
-
     let _video_listener = stream
         .add_local_listener_with_user_data(video_data)
         .param_changed(|stream, user_data, id, param| {
@@ -54,7 +52,6 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
             };
         })
 
-        //second argument 
         .process(|stream, video| match stream.dequeue_buffer() {
             None => println!("No buffer received"),
             Some(mut buffer) => {
@@ -63,10 +60,9 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
                 let bytes = data.data().unwrap();
                 let slice = &bytes[0..4];
                 let sample = f32::from_le_bytes(slice.try_into().unwrap());
-
                 
 
-                dbg!(sample);
+                println!("{}", sample);
             }
         })
         .register()?;
@@ -75,10 +71,10 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
     audio_info.set_format(AudioFormat::F32LE);
     audio_info.set_rate(DEFAULT_RATE);
     audio_info.set_channels(DEFAULT_CHANNELS);
-    let mut position = [0; pipewire::spa::param::audio::MAX_CHANNELS];
-    position[0] = libspa_sys::SPA_AUDIO_CHANNEL_FL;
-    position[1] = libspa_sys::SPA_AUDIO_CHANNEL_FR;
-    audio_info.set_position(position);
+    // let mut position = [0; pipewire::spa::param::audio::MAX_CHANNELS];
+    // position[0] = libspa_sys::SPA_AUDIO_CHANNEL_FL;
+    // position[1] = libspa_sys::SPA_AUDIO_CHANNEL_FR;
+    // audio_info.set_position(position);
 
     let pod_object = Object {
         type_: pipewire::spa::utils::SpaTypes::ObjectParamFormat.as_raw(),
