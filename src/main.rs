@@ -1,11 +1,11 @@
 use std::{collections::HashMap, error::Error, os::{fd::OwnedFd}};
 use screencast::ScreenCastSession;
 use screencast::signals::listener_stream;
-
+use std::thread;
 use futures_util::stream::StreamExt;
 use zbus::{Connection, Message};
 use zbus::zvariant::{Structure,  Array, OwnedValue};
-
+use std::time::Duration;
 use pipewire_capture::pw_init;
 
 #[tokio::main]
@@ -22,8 +22,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let pw_fd: OwnedFd = sc.get_pipewire_fd().await?;
     let node_id: u32 = parse_streams(&(parse_message(pw_streams)));
 
-    pw_init(pw_fd);
-    
+    thread::spawn(|| {
+        pw_init(pw_fd);
+    });
+    thread::sleep(Duration::from_millis(1000));
+
     
     Ok(())
 }
