@@ -1,5 +1,3 @@
-use std::io::Error;
-
 pub struct CircularBuffer<OGURI> {
     data: Vec<Option<OGURI>>,
     capacity: usize,
@@ -19,7 +17,7 @@ impl<OGURI: Clone> CircularBuffer<OGURI> {
     }
 
     fn push(element: OGURI) {
-
+        
     }
     fn pop(&mut self) -> Option<&OGURI> {
         if self.empty { 

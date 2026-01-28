@@ -44,3 +44,6 @@ fn parse_streams<'a>(unparsed_streams: &'a HashMap<String,OwnedValue>) -> u32{
 mod screencast;
 mod pipewire_capture;
 mod circular_buffer;
+
+#[cfg(test)]
+mod tests;
