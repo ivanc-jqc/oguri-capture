@@ -16,7 +16,7 @@ use pipewire::{
 use std::error::Error;
 use std::os::fd::OwnedFd;
 
-pub const DEFAULT_RATE: u32 = 44100;
+pub const DEFAULT_RATE: u32 = 30;
 pub const DEFAULT_CHANNELS: u32 = 2;
 pub const DEFAULT_VOLUME: f64 = 1.0;
 pub const PI_2: f64 = std::f64::consts::PI + std::f64::consts::PI;
@@ -53,26 +53,32 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
                 return;
             };
         })
+
+        //second argument 
         .process(|stream, video| match stream.dequeue_buffer() {
             None => println!("No buffer received"),
             Some(mut buffer) => {
-               let datas = buffer.datas_mut();
-               let mut data = &mut datas[0];
-               let bytes =  data.data().unwrap();
-               dbg!(bytes[0]);
-               
+                let datas = buffer.datas_mut();
+                let mut data = &mut datas[0];
+                let bytes = data.data().unwrap();
+                let slice = &bytes[0..4];
+                let sample = f32::from_le_bytes(slice.try_into().unwrap());
+
+                
+
+                dbg!(sample);
             }
         })
         .register()?;
 
     let mut audio_info = AudioInfoRaw::new();
     audio_info.set_format(AudioFormat::F32LE);
-    // audio_info.set_rate(DEFAULT_RATE);
-    // audio_info.set_channels(DEFAULT_CHANNELS);
-    // let mut position = [0; pipewire::spa::param::audio::MAX_CHANNELS];
-    // position[0] = libspa_sys::SPA_AUDIO_CHANNEL_FL;
-    // position[1] = libspa_sys::SPA_AUDIO_CHANNEL_FR;
-    // audio_info.set_position(position);
+    audio_info.set_rate(DEFAULT_RATE);
+    audio_info.set_channels(DEFAULT_CHANNELS);
+    let mut position = [0; pipewire::spa::param::audio::MAX_CHANNELS];
+    position[0] = libspa_sys::SPA_AUDIO_CHANNEL_FL;
+    position[1] = libspa_sys::SPA_AUDIO_CHANNEL_FR;
+    audio_info.set_position(position);
 
     let pod_object = Object {
         type_: pipewire::spa::utils::SpaTypes::ObjectParamFormat.as_raw(),
