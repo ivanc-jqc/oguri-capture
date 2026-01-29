@@ -22,6 +22,7 @@ use pipewire::{
 use std::error::Error;
 use std::io::SeekFrom;
 use std::os::fd::OwnedFd;
+use std::sync::mpsc;
 pub const DEFAULT_RATE: u32 = 44100;
 pub const DEFAULT_CHANNELS: u32 = 1;
 pub const DEFAULT_VOLUME: f64 = 1.0;
@@ -33,23 +34,35 @@ struct AudioData {
     write_buffer: CircularBuffer<f32>,
 }
 
-pub fn init() -> Result<(), Box<dyn Error>> {
-    let mainloop = MainLoopBox::new(None)?;
-    let context = ContextBox::new(&mainloop.loop_(), None)?;
-    let audio_core = context.connect(None)?;
-    let audio_stream = create_audio_stream(&audio_core)?;
-    let listener = attach_audio_listener(&audio_stream)?;
-    let audio_stream_params_data = create_stream_params_bytes();
-    let mut audio_stream_params = [Pod::from_bytes(&audio_stream_params_data).unwrap()];
-    audio_stream.connect(
-        Direction::Input,
-        None,
-        StreamFlags::AUTOCONNECT | StreamFlags::MAP_BUFFERS | StreamFlags::RT_PROCESS,
-        &mut audio_stream_params,
-    )?;
-    mainloop.run();
-    Ok(())
+pub struct PipewireManager {
+    pub main_loop:MainLoopBox
 }
+impl PipewireManager {
+    pub fn new() -> Self{
+        let mainloop = MainLoopBox::new(None).unwrap();
+        Self { main_loop: mainloop }
+    }
+    pub fn init(&self) -> Result<(), Box<dyn Error>> {
+        let context = ContextBox::new(self.main_loop.loop_(), None)?;
+        let audio_core = context.connect(None)?;
+        let audio_stream = create_audio_stream(&audio_core)?;
+        let listener = attach_audio_listener(&audio_stream)?;
+        let audio_stream_params_data = create_stream_params_bytes();
+        let mut audio_stream_params = [Pod::from_bytes(&audio_stream_params_data).unwrap()];
+        audio_stream.connect(
+            Direction::Input,
+            None,
+            StreamFlags::AUTOCONNECT | StreamFlags::MAP_BUFFERS | StreamFlags::RT_PROCESS,
+            &mut audio_stream_params,
+        )?;
+        self.main_loop.run();
+        Ok(())
+    }
+    pub fn run(&self) {
+        // self.main_loop.run();
+    }
+}
+
 fn create_audio_stream<'a>(audio_core: &'a CoreBox) -> Result<StreamBox<'a>, Box<dyn Error>> {
     let stream = StreamBox::new(
         audio_core,

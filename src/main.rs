@@ -6,7 +6,9 @@ use futures_util::stream::StreamExt;
 use zbus::{Connection, Message};
 use zbus::zvariant::{Structure,  Array, OwnedValue};
 use std::time::Duration;
-use pipewire_capture::pw_init;
+use pipewire_capture::PipewireManager;
+use std::io;
+
 use circular_buffer::CircularBuffer;
 
 use pipewire_capture::DEFAULT_RATE;
@@ -23,13 +25,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let pw_streams = sc_stream.next().await.unwrap();
     let pw_fd: OwnedFd = sc.get_pipewire_fd().await?;
     let node_id: u32 = parse_streams(&(parse_message(pw_streams)));
-    let write_buffer = CircularBuffer::new((DEFAULT_RATE * 30).try_into().unwrap());
     
     thread::spawn(|| {
-        pw_init(write_buffer).unwrap();
+        let pw_man = PipewireManager::new();
+        pw_man.init();
+        pw_man.run();
     });
-    thread::sleep(Duration::from_millis(1000));
-    dbg!(&write_buffer.data);
+    
+    let mut buffer = String::new();
+    io::stdin().read_line(&mut buffer);
+
+    dbg!(buffer);
     
     Ok(())
 }
