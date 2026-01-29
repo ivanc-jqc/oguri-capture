@@ -33,7 +33,7 @@ struct AudioData {
     write_buffer: CircularBuffer<f32>,
 }
 
-pub fn pw_init() -> Result<(), Box<dyn Error>> {
+pub fn init() -> Result<(), Box<dyn Error>> {
     let mainloop = MainLoopBox::new(None)?;
     let context = ContextBox::new(&mainloop.loop_(), None)?;
     let audio_core = context.connect(None)?;

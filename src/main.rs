@@ -7,6 +7,9 @@ use zbus::{Connection, Message};
 use zbus::zvariant::{Structure,  Array, OwnedValue};
 use std::time::Duration;
 use pipewire_capture::pw_init;
+use circular_buffer::CircularBuffer;
+
+use pipewire_capture::DEFAULT_RATE;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let connection = Connection::session().await?;
@@ -20,12 +23,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let pw_streams = sc_stream.next().await.unwrap();
     let pw_fd: OwnedFd = sc.get_pipewire_fd().await?;
     let node_id: u32 = parse_streams(&(parse_message(pw_streams)));
-
+    let write_buffer = CircularBuffer::new((DEFAULT_RATE * 30).try_into().unwrap());
+    
     thread::spawn(|| {
-        pw_init().unwrap();
+        pw_init(write_buffer).unwrap();
     });
     thread::sleep(Duration::from_millis(1000));
-
+    dbg!(&write_buffer.data);
     
     Ok(())
 }
