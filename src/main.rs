@@ -7,7 +7,6 @@ use zbus::{Connection, Message};
 use zbus::zvariant::{Structure,  Array, OwnedValue};
 use std::time::Duration;
 use pipewire_capture::pw_init;
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let connection = Connection::session().await?;
@@ -23,7 +22,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let node_id: u32 = parse_streams(&(parse_message(pw_streams)));
 
     thread::spawn(|| {
-        pw_init(pw_fd);
+        pw_init().unwrap();
     });
     thread::sleep(Duration::from_millis(1000));
 

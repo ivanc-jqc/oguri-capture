@@ -1,4 +1,7 @@
+use crate::main;
+
 use super::circular_buffer::CircularBuffer;
+use pipewire::context;
 use pipewire::core::CoreBox;
 use pipewire::properties::properties;
 use pipewire::spa::{
@@ -10,6 +13,7 @@ use pipewire::spa::{
     pod::{Object, Pod},
     utils::Direction,
 };
+use pipewire::stream::StreamListener;
 use pipewire::{
     context::ContextBox,
     main_loop::MainLoopBox,
@@ -29,46 +33,26 @@ struct AudioData {
     write_buffer: CircularBuffer<f32>,
 }
 
-struct pw_handler<'a> {
-    pub main_loop: MainLoopBox,
-    context: Option<ContextBox<'a>>,
-    core: Option<CoreBox<'a>>,
-    file_descriptor: Option<OwnedFd>,
-}
-
-impl<'a> pw_handler<'a> {
-    pub fn new(fd: OwnedFd) -> Result<Self, Box<dyn Error>> {
-        let mainloop = MainLoopBox::new(None)?;
-
-        Ok(Self {
-            main_loop: mainloop,
-            context: None,
-            core: None,
-            file_descriptor: Some(fd),
-        })
-    }
-    pub fn init(&'a mut self) -> Result<(), Box<dyn Error>> {
-        let context: ContextBox<'a>  = ContextBox::new(self.main_loop.loop_(), None)?;
-        self.context = Some(context);
-        let core: CoreBox<'a>  = self.context.as_ref().unwrap().connect(None)?;
-        self.core = Some(core);
-        Ok(())
-    }
-}
-
-pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
+pub fn pw_init() -> Result<(), Box<dyn Error>> {
     let mainloop = MainLoopBox::new(None)?;
     let context = ContextBox::new(&mainloop.loop_(), None)?;
-    // let video_core = context.connect_fd(fd, None)?;
-    let video_core = context.connect(None)?;
-
-    let audio_data = AudioData {
-        format: Default::default(),
-        write_buffer: CircularBuffer::new((DEFAULT_RATE * 30).try_into().unwrap()),
-    };
-
+    let audio_core = context.connect(None)?;
+    let audio_stream = create_audio_stream(&audio_core)?;
+    let listener = attach_audio_listener(&audio_stream)?;
+    let audio_stream_params_data = create_stream_params_bytes();
+    let mut audio_stream_params = [Pod::from_bytes(&audio_stream_params_data).unwrap()];
+    audio_stream.connect(
+        Direction::Input,
+        None,
+        StreamFlags::AUTOCONNECT | StreamFlags::MAP_BUFFERS | StreamFlags::RT_PROCESS,
+        &mut audio_stream_params,
+    )?;
+    mainloop.run();
+    Ok(())
+}
+fn create_audio_stream<'a>(audio_core: &'a CoreBox) -> Result<StreamBox<'a>, Box<dyn Error>> {
     let stream = StreamBox::new(
-        &video_core,
+        audio_core,
         "oguri-capture",
         properties! {
             "PW_KEY_MEDIA_TYPE" => "Audio",
@@ -76,7 +60,15 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
             // "PW_KEY_MEDIA_ROLE" => "Playback"
         },
     )?;
-    let _video_listener = stream
+    Ok(stream)
+}
+
+fn attach_audio_listener(stream: &StreamBox) -> Result<StreamListener<AudioData>, Box<dyn Error>> {
+    let audio_data = AudioData {
+        format: Default::default(),
+        write_buffer: CircularBuffer::new((DEFAULT_RATE * 30).try_into().unwrap()),
+    };
+    let listener = stream
         .add_local_listener_with_user_data(audio_data)
         .param_changed(|stream, user_data, id, param| {
             let Some(param) = param else {
@@ -96,7 +88,10 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
             }
         })
         .register()?;
+    Ok(listener)
+}
 
+fn create_stream_params_bytes() -> Vec<u8>{
     let mut audio_info = AudioInfoRaw::new();
     audio_info.set_format(AudioFormat::F32LE);
     audio_info.set_rate(DEFAULT_RATE);
@@ -120,16 +115,7 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
     .unwrap()
     .0
     .into_inner();
-
-    let mut params = [Pod::from_bytes(&values).unwrap()];
-
-    stream.connect(
-        Direction::Input,
-        None,
-        StreamFlags::AUTOCONNECT | StreamFlags::MAP_BUFFERS | StreamFlags::RT_PROCESS,
-        &mut params,
-    )?;
-    mainloop.run();
-    Ok(())
+    
+    // let mut params = [Pod::from_bytes(&values).unwrap()];
+    values
 }
-pub fn pw_run() {}
