@@ -29,24 +29,28 @@ pub const DEFAULT_VOLUME: f64 = 1.0;
 pub const PI_2: f64 = std::f64::consts::PI + std::f64::consts::PI;
 pub const CHAN_SIZE: usize = std::mem::size_of::<i16>();
 
-struct AudioData {
+struct AudioData<'a> {
     format: AudioInfoRaw,
-    write_buffer: CircularBuffer<f32>,
+    write_buffer: &'a mut CircularBuffer<f32>,
 }
 
 pub struct PipewireManager {
-    pub main_loop:MainLoopBox
+    pub main_loop: MainLoopBox,
+    pub audio_buffer: CircularBuffer<f32>,
 }
 impl PipewireManager {
-    pub fn new() -> Self{
+    pub fn new() -> Self {
         let mainloop = MainLoopBox::new(None).unwrap();
-        Self { main_loop: mainloop }
+        Self {
+            main_loop: mainloop,
+            audio_buffer: CircularBuffer::new((DEFAULT_RATE * 30).try_into().unwrap()),
+        }
     }
-    pub fn init(&self) -> Result<(), Box<dyn Error>> {
+    pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         let context = ContextBox::new(self.main_loop.loop_(), None)?;
         let audio_core = context.connect(None)?;
         let audio_stream = create_audio_stream(&audio_core)?;
-        let listener = attach_audio_listener(&audio_stream)?;
+        let listener = attach_audio_listener(&audio_stream,&mut self.audio_buffer)?;
         let audio_stream_params_data = create_stream_params_bytes();
         let mut audio_stream_params = [Pod::from_bytes(&audio_stream_params_data).unwrap()];
         audio_stream.connect(
@@ -57,9 +61,6 @@ impl PipewireManager {
         )?;
         self.main_loop.run();
         Ok(())
-    }
-    pub fn run(&self) {
-        // self.main_loop.run();
     }
 }
 
@@ -76,10 +77,10 @@ fn create_audio_stream<'a>(audio_core: &'a CoreBox) -> Result<StreamBox<'a>, Box
     Ok(stream)
 }
 
-fn attach_audio_listener(stream: &StreamBox) -> Result<StreamListener<AudioData>, Box<dyn Error>> {
+fn attach_audio_listener<'a>(stream: &StreamBox,write_buffer: &'a mut CircularBuffer<f32>) -> Result<StreamListener<AudioData<'a>>, Box<dyn Error>> {
     let audio_data = AudioData {
         format: Default::default(),
-        write_buffer: CircularBuffer::new((DEFAULT_RATE * 30).try_into().unwrap()),
+        write_buffer: write_buffer,
     };
     let listener = stream
         .add_local_listener_with_user_data(audio_data)
@@ -104,7 +105,7 @@ fn attach_audio_listener(stream: &StreamBox) -> Result<StreamListener<AudioData>
     Ok(listener)
 }
 
-fn create_stream_params_bytes() -> Vec<u8>{
+fn create_stream_params_bytes() -> Vec<u8> {
     let mut audio_info = AudioInfoRaw::new();
     audio_info.set_format(AudioFormat::F32LE);
     audio_info.set_rate(DEFAULT_RATE);
@@ -128,7 +129,7 @@ fn create_stream_params_bytes() -> Vec<u8>{
     .unwrap()
     .0
     .into_inner();
-    
+
     // let mut params = [Pod::from_bytes(&values).unwrap()];
     values
 }

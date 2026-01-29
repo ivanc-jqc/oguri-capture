@@ -25,10 +25,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let pw_streams = sc_stream.next().await.unwrap();
     let pw_fd: OwnedFd = sc.get_pipewire_fd().await?;
     let node_id: u32 = parse_streams(&(parse_message(pw_streams)));
-    
+
     thread::spawn(|| {
-        let pw_man = PipewireManager::new();
-        pw_man.init();
+        let mut pw_man = PipewireManager::new();
         pw_man.run();
     });
     
