@@ -1,3 +1,5 @@
+use super::circular_buffer::CircularBuffer;
+use pipewire::core::CoreBox;
 use pipewire::properties::properties;
 use pipewire::spa::{
     param::{
@@ -14,6 +16,7 @@ use pipewire::{
     stream::{StreamBox, StreamFlags},
 };
 use std::error::Error;
+use std::io::SeekFrom;
 use std::os::fd::OwnedFd;
 pub const DEFAULT_RATE: u32 = 44100;
 pub const DEFAULT_CHANNELS: u32 = 1;
@@ -21,8 +24,36 @@ pub const DEFAULT_VOLUME: f64 = 1.0;
 pub const PI_2: f64 = std::f64::consts::PI + std::f64::consts::PI;
 pub const CHAN_SIZE: usize = std::mem::size_of::<i16>();
 
-struct VideoData {
-    format: VideoInfoRaw
+struct AudioData {
+    format: AudioInfoRaw,
+    write_buffer: CircularBuffer<f32>,
+}
+
+struct pw_handler<'a> {
+    pub main_loop: MainLoopBox,
+    context: Option<ContextBox<'a>>,
+    core: Option<CoreBox<'a>>,
+    file_descriptor: Option<OwnedFd>,
+}
+
+impl<'a> pw_handler<'a> {
+    pub fn new(fd: OwnedFd) -> Result<Self, Box<dyn Error>> {
+        let mainloop = MainLoopBox::new(None)?;
+
+        Ok(Self {
+            main_loop: mainloop,
+            context: None,
+            core: None,
+            file_descriptor: Some(fd),
+        })
+    }
+    pub fn init(&'a mut self) -> Result<(), Box<dyn Error>> {
+        let context: ContextBox<'a>  = ContextBox::new(self.main_loop.loop_(), None)?;
+        self.context = Some(context);
+        let core: CoreBox<'a>  = self.context.as_ref().unwrap().connect(None)?;
+        self.core = Some(core);
+        Ok(())
+    }
 }
 
 pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
@@ -31,8 +62,9 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
     // let video_core = context.connect_fd(fd, None)?;
     let video_core = context.connect(None)?;
 
-    let video_data = VideoData {
+    let audio_data = AudioData {
         format: Default::default(),
+        write_buffer: CircularBuffer::new((DEFAULT_RATE * 30).try_into().unwrap()),
     };
 
     let stream = StreamBox::new(
@@ -45,14 +77,13 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
         },
     )?;
     let _video_listener = stream
-        .add_local_listener_with_user_data(video_data)
+        .add_local_listener_with_user_data(audio_data)
         .param_changed(|stream, user_data, id, param| {
             let Some(param) = param else {
                 return;
             };
         })
-
-        .process(|stream, video| match stream.dequeue_buffer() {
+        .process(|stream, audio_data| match stream.dequeue_buffer() {
             None => println!("No buffer received"),
             Some(mut buffer) => {
                 let datas = buffer.datas_mut();
@@ -60,8 +91,7 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
                 let bytes = data.data().unwrap();
                 let slice = &bytes[0..4];
                 let sample = f32::from_le_bytes(slice.try_into().unwrap());
-                
-
+                audio_data.write_buffer.push(sample);
                 println!("{}", sample);
             }
         })
@@ -102,3 +132,4 @@ pub fn pw_init(fd: OwnedFd) -> Result<(), Box<dyn Error>> {
     mainloop.run();
     Ok(())
 }
+pub fn pw_run() {}

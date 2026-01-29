@@ -5,7 +5,7 @@ pub struct CircularBuffer<OGURI> {
     wrapped: bool,
 }
 impl<OGURI: Clone> CircularBuffer<OGURI> {
-    fn new(capacity: usize) -> Self {
+    pub fn new(capacity: usize) -> Self {
         Self { 
             data: vec![None; capacity],
             capacity: capacity, 
@@ -14,7 +14,7 @@ impl<OGURI: Clone> CircularBuffer<OGURI> {
         }
     }
 
-    fn push(&mut self, element: OGURI) {
+    pub fn push(&mut self, element: OGURI) {
         self.data[self.head] = Some(element);
 
 
@@ -27,7 +27,7 @@ impl<OGURI: Clone> CircularBuffer<OGURI> {
         }
         
     }
-    fn rotate(&mut self) { 
+    pub fn rotate(&mut self) { 
         self.data.rotate_left(self.head);
     }
     fn dump(&mut self) {
