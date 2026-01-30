@@ -26,9 +26,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let node_id: u32 = parse_streams(&(parse_message(pw_streams)));
 
     let _pw_thread = thread::spawn(move|| {
-        let mut pw_man = PipewireManager::new(pw_fd, pw_rx );
+        let mut pw_man = PipewireManager::new(pw_fd);
         pw_man.audio.connect_audio();
-        pw_man.run();
+        pw_man.run(pw_rx);
     });
     
     let mut buffer = String::new();
