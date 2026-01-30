@@ -1,9 +1,10 @@
 use crate::main;
 
 use super::circular_buffer::CircularBuffer;
-use pipewire::context;
-use pipewire::core::CoreBox;
+use pipewire::context::{self, ContextRc};
+use pipewire::core::{CoreBox, CoreRc, Listener};
 use pipewire::properties::properties;
+use pipewire::registry::{self, RegistryRc};
 use pipewire::spa::{
     param::{
         ParamType,
@@ -13,10 +14,10 @@ use pipewire::spa::{
     pod::{Object, Pod},
     utils::Direction,
 };
-use pipewire::stream::StreamListener;
+use pipewire::stream::{StreamListener, StreamRc};
 use pipewire::{
     context::ContextBox,
-    main_loop::MainLoopBox,
+    main_loop::MainLoopRc,
     stream::{StreamBox, StreamFlags},
 };
 use std::error::Error;
@@ -35,37 +36,52 @@ struct AudioData<'a> {
 }
 
 pub struct PipewireManager {
-    pub main_loop: MainLoopBox,
+    pub main_loop: MainLoopRc,
+    pub context: ContextRc,
+    registry: RegistryRc,
+    registry_listener: registry::Listener,
+    pub audio_core: CoreRc,
     pub audio_buffer: CircularBuffer<f32>,
+
 }
 impl PipewireManager {
     pub fn new() -> Self {
-        let mainloop = MainLoopBox::new(None).unwrap();
+        let mainloop = MainLoopRc::new(None).unwrap();
+        let context = ContextRc::new(&mainloop, None).unwrap();
+        let audio_core = context.connect_rc(None).unwrap();
+        let registry = audio_core.get_registry_rc().unwrap();
+        let reg_listener = registry.add_listener_local().global(|global| {
+           dbg!(global);
+        }).register();
         Self {
             main_loop: mainloop,
+            context: context,
+            registry: registry,
+            registry_listener: reg_listener,
+            audio_core: audio_core,
             audio_buffer: CircularBuffer::new((DEFAULT_RATE * 30).try_into().unwrap()),
         }
     }
-    pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
-        let context = ContextBox::new(self.main_loop.loop_(), None)?;
-        let audio_core = context.connect(None)?;
-        let audio_stream = create_audio_stream(&audio_core)?;
-        let listener = attach_audio_listener(&audio_stream,&mut self.audio_buffer)?;
+    pub fn create_audio_stream(&mut self) {
+        let audio_stream = create_audio_stream(self.audio_core.clone()).unwrap();
+        let listener = attach_audio_listener(audio_stream.clone(), &mut self.audio_buffer).unwrap();
         let audio_stream_params_data = create_stream_params_bytes();
         let mut audio_stream_params = [Pod::from_bytes(&audio_stream_params_data).unwrap()];
         audio_stream.connect(
             Direction::Input,
-            None,
+            None, //which node to listen to
             StreamFlags::AUTOCONNECT | StreamFlags::MAP_BUFFERS | StreamFlags::RT_PROCESS,
             &mut audio_stream_params,
-        )?;
+        ).unwrap();
+    }
+    pub fn run(&mut self) -> Result<(), Box<dyn Error>> {
         self.main_loop.run();
         Ok(())
     }
 }
 
-fn create_audio_stream<'a>(audio_core: &'a CoreBox) -> Result<StreamBox<'a>, Box<dyn Error>> {
-    let stream = StreamBox::new(
+fn create_audio_stream(audio_core: CoreRc) -> Result<StreamRc, Box<dyn Error>> {
+    let stream = StreamRc::new(
         audio_core,
         "oguri-capture",
         properties! {
@@ -77,7 +93,10 @@ fn create_audio_stream<'a>(audio_core: &'a CoreBox) -> Result<StreamBox<'a>, Box
     Ok(stream)
 }
 
-fn attach_audio_listener<'a>(stream: &StreamBox,write_buffer: &'a mut CircularBuffer<f32>) -> Result<StreamListener<AudioData<'a>>, Box<dyn Error>> {
+fn attach_audio_listener<'a>(
+    stream: StreamRc,
+    write_buffer: &'a mut CircularBuffer<f32>,
+) -> Result<StreamListener<AudioData<'a>>, Box<dyn Error>> {
     let audio_data = AudioData {
         format: Default::default(),
         write_buffer: write_buffer,

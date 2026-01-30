@@ -8,7 +8,6 @@ use zbus::zvariant::{Structure,  Array, OwnedValue};
 use std::time::Duration;
 use pipewire_capture::PipewireManager;
 use std::io;
-
 use circular_buffer::CircularBuffer;
 
 use pipewire_capture::DEFAULT_RATE;
