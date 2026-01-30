@@ -29,6 +29,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let mut pw_man = PipewireManager::new(pw_fd);
         pw_man.audio.connect_audio();
         pw_man.run(pw_rx);
+        let mut binding = pw_man.audio.audio_buffer.borrow_mut();
+        let vec = binding.dump();
+        for x in vec.into_iter().flatten(){
+            dbg!(x);
+        }
+            
     });
     
     let mut buffer = String::new();

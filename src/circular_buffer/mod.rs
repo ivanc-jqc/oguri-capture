@@ -30,7 +30,7 @@ impl<OGURI: Clone> CircularBuffer<OGURI> {
     fn rotate(&mut self) { 
         self.data.rotate_left(self.head);
     }
-    fn dump(&mut self) -> &Vec<Option<OGURI>> {
+    pub fn dump(&mut self) -> &Vec<Option<OGURI>> {
         if (self.wrapped) {
             self.rotate();
         }
