@@ -1,5 +1,5 @@
 pub struct CircularBuffer<OGURI> {
-    pub data: Vec<Option<OGURI>>,
+    data: Vec<Option<OGURI>>,
     capacity: usize,
     head: usize,
     wrapped: bool,
@@ -27,10 +27,14 @@ impl<OGURI: Clone> CircularBuffer<OGURI> {
         }
         
     }
-    pub fn rotate(&mut self) { 
+    fn rotate(&mut self) { 
         self.data.rotate_left(self.head);
     }
-    fn dump(&mut self) {
+    fn dump(&mut self) -> &Vec<Option<OGURI>> {
+        if (self.wrapped) {
+            self.rotate();
+        }
+        &self.data
     }
     // for now.. not needed.
     // fn pop(&self) -> Option<&OGURI> {
