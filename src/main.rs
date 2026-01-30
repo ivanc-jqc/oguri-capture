@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, os::{fd::OwnedFd}};
+use std::{collections::HashMap, error::Error, os::fd::OwnedFd, sync::mpsc};
 use screencast::ScreenCastSession;
 use screencast::signals::listener_stream;
 use std::thread;
@@ -7,13 +7,15 @@ use zbus::{Connection, Message};
 use zbus::zvariant::{Structure,  Array, OwnedValue};
 use std::time::Duration;
 use pipewire_capture::PipewireManager;
+use pipewire_capture::TERMINATE;
 use std::io;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let connection = Connection::session().await?;
     let sc = ScreenCastSession::new(&connection).await?;
-    
+    let (pw_tx, pw_rx) = pipewire::channel::channel();
+
     
     sc.select_sources().await?;
     let mut sc_stream = listener_stream(&connection, &sc.sender_id).await?;
@@ -23,15 +25,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let pw_fd: OwnedFd = sc.get_pipewire_fd().await?;
     let node_id: u32 = parse_streams(&(parse_message(pw_streams)));
 
-    thread::spawn(move|| {
-        let mut pw_man = PipewireManager::new(pw_fd);
+    let _pw_thread = thread::spawn(move|| {
+        let mut pw_man = PipewireManager::new(pw_fd, pw_rx );
         pw_man.audio.connect_audio();
         pw_man.run();
     });
     
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer);
+    pw_tx.send(TERMINATE);
 
+    thread::sleep(Duration::from_secs(10));
     dbg!(buffer);
     
     Ok(())
@@ -53,6 +57,5 @@ fn parse_streams<'a>(unparsed_streams: &'a HashMap<String,OwnedValue>) -> u32{
 mod screencast;
 mod pipewire_capture;
 mod circular_buffer;
-
 #[cfg(test)]
 mod tests;

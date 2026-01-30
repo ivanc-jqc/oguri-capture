@@ -1,9 +1,10 @@
+use audio::Audio;
+use pipewire::channel;
 use pipewire::context::ContextRc;
-use pipewire::registry::{self, RegistryRc};
 use pipewire::main_loop::MainLoopRc;
+use pipewire::registry::{self, RegistryRc};
 use std::error::Error;
 use std::os::fd::OwnedFd;
-use audio::Audio;
 use video::Video;
 pub struct PipewireManager {
     main_loop: MainLoopRc,
@@ -14,10 +15,16 @@ pub struct PipewireManager {
     pub audio: Audio,
     pub video: Video,
 }
+pub struct TERMINATE;
 
 impl PipewireManager {
-    pub fn new(fd: OwnedFd) -> Self {
+    pub fn new(fd: OwnedFd, pw_rx: channel::Receiver<TERMINATE>) -> Self {
         let mainloop = MainLoopRc::new(None).unwrap();
+        let temp = mainloop.clone();
+        let _receiver = pw_rx.attach(temp.loop_(), {
+            let mainloop = mainloop.clone();
+            move |_| mainloop.quit()
+        });
         let context = ContextRc::new(&mainloop, None).unwrap();
         let audio_core = context.connect_rc(None).unwrap();
         let video_core = context.connect_fd_rc(fd, None).unwrap();
@@ -42,8 +49,6 @@ impl PipewireManager {
         Ok(())
     }
 }
-
-
 
 mod audio;
 mod video;
