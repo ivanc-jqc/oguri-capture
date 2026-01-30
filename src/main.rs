@@ -27,10 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     thread::spawn(move|| {
         let mut pw_man = PipewireManager::new(pw_fd);
-        pw_man.connect_audio();
-        let bruh = pw_man.audio_listeners.borrow().len();
-        dbg!(bruh);
-    
+        pw_man.audio.connect_audio();
         pw_man.run();
     });
     
