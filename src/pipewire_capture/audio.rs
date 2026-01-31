@@ -82,7 +82,6 @@ impl Audio {
                         drop(x);
                     }
                     // println!("{}", sample);
-                    println!("wrote");
                 }
             })
             .register()?;

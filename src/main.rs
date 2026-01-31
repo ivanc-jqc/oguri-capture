@@ -6,7 +6,7 @@ use std::thread;
 use futures_util::stream::StreamExt;
 use zbus::{Connection, Message};
 use zbus::zvariant::{Structure,  Array, OwnedValue};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use pipewire_capture::PipewireManager;
 use pipewire_capture::TERMINATE;
 use std::io::{self, Write};
@@ -36,8 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         drop(binding);
         let path = Path::new("dump");
         let mut file = File::create(path).unwrap();
-
-        let mut counter = 0;
+        let start = Instant::now();
         for x in vec.iter(){
             let x = match x {
                 Some(x) => x,
@@ -46,15 +45,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
             
             let temp = x.to_le_bytes();
             file.write_all(&temp).unwrap();
-            counter += 1;
     
         }
-        // dbg!(vec.len());
+        let elapsed = start.elapsed();
+        dbg!(elapsed);
+        dbg!(vec.len());
     });
     
     let mut buffer = String::new();
     // io::stdin().read_line(&mut buffer);
-    thread::sleep(Duration::from_secs(2));
+    thread::sleep(Duration::from_secs(40));
     pw_tx.send(TERMINATE);
     thread::sleep(Duration::from_secs(10));
     // dbg!(buffer);
