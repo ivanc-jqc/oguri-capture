@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::{collections::HashMap, error::Error, os::fd::OwnedFd, sync::mpsc};
 use screencast::ScreenCastSession;
 use screencast::signals::listener_stream;
@@ -8,7 +9,8 @@ use zbus::zvariant::{Structure,  Array, OwnedValue};
 use std::time::Duration;
 use pipewire_capture::PipewireManager;
 use pipewire_capture::TERMINATE;
-use std::io;
+use std::io::{self, Write};
+use std::fs::File;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -31,17 +33,28 @@ async fn main() -> Result<(), Box<dyn Error>> {
         pw_man.run(pw_rx);
         let mut binding = pw_man.audio.audio_buffer.borrow_mut();
         let vec = binding.dump();
-        for x in vec.into_iter().flatten(){
-            dbg!(x);
+
+        let path = Path::new("dump");
+        let mut file = File::create(path).unwrap();
+        println!("{:?}", &vec);
+
+
+
+        let mut counter = 0;
+        for x in vec.iter(){
+            dbg!(&counter);
+            let temp = x.unwrap().to_le_bytes();
+            file.write_all(&temp).unwrap();
+            counter += 1;
+    
         }
-            
+        // dbg!(vec.len());
     });
     
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer);
     pw_tx.send(TERMINATE);
 
-    thread::sleep(Duration::from_secs(10));
     dbg!(buffer);
     
     Ok(())

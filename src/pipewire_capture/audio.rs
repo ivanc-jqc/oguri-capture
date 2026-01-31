@@ -78,6 +78,7 @@ impl Audio {
                     let sample = f32::from_le_bytes(slice.try_into().unwrap());
                     audio_data.write_buffer.borrow_mut().push(sample);
                     // println!("{}", sample);
+                    println!("wrote");
                 }
             })
             .register()?;

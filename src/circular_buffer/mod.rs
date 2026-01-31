@@ -4,7 +4,7 @@ pub struct CircularBuffer<OGURI> {
     head: usize,
     wrapped: bool,
 }
-impl<OGURI: Clone> CircularBuffer<OGURI> {
+impl<OGURI: Clone + std::fmt::Debug> CircularBuffer<OGURI> {
     pub fn new(capacity: usize) -> Self {
         Self { 
             data: vec![None; capacity],
@@ -15,9 +15,9 @@ impl<OGURI: Clone> CircularBuffer<OGURI> {
     }
 
     pub fn push(&mut self, element: OGURI) {
+        let temp = element.clone();
         self.data[self.head] = Some(element);
-
-
+        println!("head: {:?}", self.head);
         if self.head+1 == self.capacity {
             self.head = 0;
             self.wrapped = true;
