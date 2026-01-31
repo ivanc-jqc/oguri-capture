@@ -17,13 +17,13 @@ pub const DEFAULT_RATE: u32 = 44100;
 pub const DEFAULT_CHANNELS: u32 = 1;
 pub struct AudioData {
     format: AudioInfoRaw,
-    write_buffer: Rc<RefCell<CircularBuffer<f32>>>,
+    write_buffer: Rc<CircularBuffer<f32>>,
 }
 pub struct Audio {
     pub audio_core: CoreRc,
     pub audio_streams: RefCell<Vec<StreamRc>>,
     pub audio_listeners: RefCell<Vec<StreamListener<AudioData>>>,
-    pub audio_buffer: Rc<RefCell<CircularBuffer<f32>>>,
+    pub audio_buffer: Rc<CircularBuffer<f32>>,
 }
 impl Audio {
     pub fn new(audio_core: CoreRc) -> Self {
@@ -31,9 +31,9 @@ impl Audio {
             audio_core:audio_core,
             audio_streams: RefCell::new(Vec::new()),
             audio_listeners: RefCell::new(Vec::new()),
-            audio_buffer: Rc::new(RefCell::new(CircularBuffer::new(
+            audio_buffer: Rc::new(CircularBuffer::new(
                 (DEFAULT_RATE * 30).try_into().unwrap()),
-            )),
+            ),
         }
     }
     pub fn connect_audio(&self) -> Result<(), Box<dyn Error>> {
@@ -77,8 +77,7 @@ impl Audio {
                     let slice = &bytes[0..4];
                     let sample = f32::from_le_bytes(slice.try_into().unwrap());
                     {
-                        let mut x = audio_data.write_buffer.borrow_mut();
-                        x.push(sample);
+                        let mut x = audio_data.write_buffer.push(sample);
                         drop(x);
                     }
                     // println!("{}", sample);

@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 pub struct CircularBuffer<OGURI> {
     data: Vec<Option<OGURI>>,
     capacity: usize,
@@ -45,6 +47,19 @@ impl<OGURI: Clone + std::fmt::Debug> CircularBuffer<OGURI> {
     //     Some(ble)
     // }
 
+}
+
+impl<OGURI> Deref for CircularBuffer<OGURI> {
+    type Target = Vec<Option<OGURI>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+impl<OGURI> DerefMut for CircularBuffer<OGURI> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
+    }
 }
 #[cfg(test)]
 mod tests {
