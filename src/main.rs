@@ -32,18 +32,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
         pw_man.audio.connect_audio();
         pw_man.run(pw_rx);
         let mut binding = pw_man.audio.audio_buffer.borrow_mut();
-        let vec = binding.dump();
-
+        let vec = binding.dump().clone();
+        drop(binding);
         let path = Path::new("dump");
         let mut file = File::create(path).unwrap();
-        println!("{:?}", &vec);
-
-
 
         let mut counter = 0;
         for x in vec.iter(){
-            dbg!(&counter);
-            let temp = x.unwrap().to_le_bytes();
+            let x = match x {
+                Some(x) => x,
+                None => &(0f32),
+            };
+            
+            let temp = x.to_le_bytes();
             file.write_all(&temp).unwrap();
             counter += 1;
     
@@ -52,10 +53,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
     
     let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer);
+    // io::stdin().read_line(&mut buffer);
+    thread::sleep(Duration::from_secs(2));
     pw_tx.send(TERMINATE);
-
-    dbg!(buffer);
+    thread::sleep(Duration::from_secs(10));
+    // dbg!(buffer);
     
     Ok(())
 }
