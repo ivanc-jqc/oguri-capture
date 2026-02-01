@@ -1,4 +1,5 @@
 use crate::circular_buffer::CircularBuffer;
+use futures_util::lock::Mutex;
 use pipewire::core::CoreRc;
 use pipewire::properties::properties;
 use pipewire::spa::{
@@ -13,11 +14,16 @@ use pipewire::stream::{StreamListener, StreamRc, StreamFlags};
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::atomic::AtomicU32;
+use std::thread;
+use std::time::Duration;
 pub const DEFAULT_RATE: u32 = 44100;
 pub const DEFAULT_CHANNELS: u32 = 1;
 pub struct AudioData {
     format: AudioInfoRaw,
     write_buffer: Rc<CircularBuffer<f32>>,
+    test: Arc<Vec<u32>>
 }
 pub struct Audio {
     pub audio_core: CoreRc,
@@ -32,11 +38,11 @@ impl Audio {
             audio_streams: RefCell::new(Vec::new()),
             audio_listeners: RefCell::new(Vec::new()),
             audio_buffer: Rc::new(CircularBuffer::new(
-                (DEFAULT_RATE * 30).try_into().unwrap()),
+                (DEFAULT_RATE * 30).try_into().unwrap())
             ),
         }
     }
-    pub fn connect_audio(&self) -> Result<(), Box<dyn Error>> {
+    pub fn connect_audio(&mut self) -> Result<(), Box<dyn Error>> {
         let audio_stream = create_audio_stream(self.audio_core.clone()).unwrap();
         let listener = self.attach_audio_listener(audio_stream.clone()).unwrap();
         let audio_stream_params_data = create_stream_params_bytes();
@@ -54,13 +60,17 @@ impl Audio {
         Ok(())
     }
     fn attach_audio_listener(
-        &self,
+        &mut self,
         stream: StreamRc,
     ) -> Result<StreamListener<AudioData>, Box<dyn Error>> {
         let audio_data = AudioData {
             format: Default::default(),
             write_buffer: self.audio_buffer.clone(),
+            test: Arc::new(vec![1,2,3,4]),
         };
+
+        let testes: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(vec![0.0; 1024]));
+        let cb_buf = testes.clone();
         let listener = stream
             .add_local_listener_with_user_data(audio_data)
             .param_changed(|stream, user_data, id, param| {
@@ -76,10 +86,12 @@ impl Audio {
                     let bytes = data.data().unwrap();
                     let slice = &bytes[0..4];
                     let sample = f32::from_le_bytes(slice.try_into().unwrap());
-                    {
-                        let mut x = audio_data.write_buffer.push(sample);
-                        drop(x);
-                    }
+                    thread::sleep(Duration::from_secs(1));
+                    println!("{}", sample);
+                    // {
+                    //     let mut x = audio_data.write_buffer.push(sample);
+                    //     drop(x);
+                    // }
                     // println!("{}", sample);
                 }
             })

@@ -31,25 +31,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let mut pw_man = PipewireManager::new(pw_fd);
         pw_man.audio.connect_audio();
         pw_man.run(pw_rx);
-        let mut binding = pw_man.audio.audio_buffer.borrow_mut();
-        let vec = binding.dump().clone();
-        drop(binding);
-        let path = Path::new("dump");
-        let mut file = File::create(path).unwrap();
-        let start = Instant::now();
-        for x in vec.iter(){
-            let x = match x {
-                Some(x) => x,
-                None => &(0f32),
-            };
+        // let mut binding = pw_man.audio.audio_buffer.borrow_mut();
+        // let vec = binding.dump().clone();
+        // drop(binding);
+        // let path = Path::new("dump");
+        // let mut file = File::create(path).unwrap();
+        // let start = Instant::now();
+        // for x in vec.iter(){
+        //     let x = match x {
+        //         Some(x) => x,
+        //         None => &(0f32),
+        //     };
             
-            let temp = x.to_le_bytes();
-            file.write_all(&temp).unwrap();
+        //     let temp = x.to_le_bytes();
+        //     file.write_all(&temp).unwrap();
     
-        }
-        let elapsed = start.elapsed();
-        dbg!(elapsed);
-        dbg!(vec.len());
+        // }
+        // let elapsed = start.elapsed();
+        // dbg!(elapsed);
+        // dbg!(vec.len());
     });
     
     let mut buffer = String::new();
