@@ -1,9 +1,9 @@
 use std::{cell::{Cell, UnsafeCell}, mem::MaybeUninit, ops::{Deref, DerefMut}};
 
-pub struct RingBuffer<T, const N: usize> {
-    buffer: [UnsafeCell<MaybeUninit<T>>; N],
-    head: usize
-}
+// pub struct RingBuffer<T, const N: usize> {
+//     buffer: [UnsafeCell<MaybeUninit<T>>; N],
+//     head: usize
+// }
 // impl<T, const N: usize> RingBuffer<T, N> {
 //     pub fn new() -> Self {  
 //         const temp = UnsafeCell::<MaybeUninit<T>>::new(MaybeUninit::uninit());
