@@ -10,7 +10,10 @@ use pipewire::spa::{
     pod::{Object, Pod},
     utils::Direction,
 };
-use pipewire::stream::{StreamListener, StreamRc, StreamFlags};
+use pipewire::stream::{StreamFlags, StreamListener, StreamRc};
+use ringbuf::HeapRb;
+use ringbuf::storage::Heap;
+use ringbuf::traits::{Producer, Split};
 use std::cell::RefCell;
 use std::error::Error;
 use std::rc::Rc;
@@ -22,29 +25,19 @@ pub const DEFAULT_RATE: u32 = 44100;
 pub const DEFAULT_CHANNELS: u32 = 1;
 pub struct AudioData {
     format: AudioInfoRaw,
-    write_buffer: Rc<CircularBuffer<f32>>,
-    test: Arc<Vec<u32>>
 }
 pub struct Audio {
-    pub audio_core: CoreRc,
-    pub audio_streams: RefCell<Vec<StreamRc>>,
-    pub audio_listeners: RefCell<Vec<StreamListener<AudioData>>>,
-    pub audio_buffer: Rc<CircularBuffer<f32>>,
+    audio_core: CoreRc,
+    audio_streams: Vec<StreamRc>,
+    audio_listeners: Vec<StreamListener<AudioData>>,
+    pub audio_buffer_cons: ringbuf::HeapCons<f32>,
 }
 impl Audio {
     pub fn new(audio_core: CoreRc) -> Self {
-        Self {
-            audio_core:audio_core,
-            audio_streams: RefCell::new(Vec::new()),
-            audio_listeners: RefCell::new(Vec::new()),
-            audio_buffer: Rc::new(CircularBuffer::new(
-                (DEFAULT_RATE * 30).try_into().unwrap())
-            ),
-        }
-    }
-    pub fn connect_audio(&mut self) -> Result<(), Box<dyn Error>> {
-        let audio_stream = create_audio_stream(self.audio_core.clone()).unwrap();
-        let listener = self.attach_audio_listener(audio_stream.clone()).unwrap();
+        let temp = HeapRb::<f32>::new((DEFAULT_RATE * 30).try_into().unwrap());
+        let audio_stream = create_audio_stream(audio_core.clone()).unwrap();
+        let (mut prod, mut cons) = temp.split();
+        let listener = attach_audio_listener(audio_stream.clone(),prod).unwrap();
         let audio_stream_params_data = create_stream_params_bytes();
         let mut audio_stream_params = [Pod::from_bytes(&audio_stream_params_data).unwrap()];
         audio_stream
@@ -55,52 +48,50 @@ impl Audio {
                 &mut audio_stream_params,
             )
             .unwrap();
-        self.audio_streams.borrow_mut().push(audio_stream);
-        self.audio_listeners.borrow_mut().push(listener);
-        Ok(())
-    }
-    fn attach_audio_listener(
-        &mut self,
-        stream: StreamRc,
-    ) -> Result<StreamListener<AudioData>, Box<dyn Error>> {
-        let audio_data = AudioData {
-            format: Default::default(),
-            write_buffer: self.audio_buffer.clone(),
-            test: Arc::new(vec![1,2,3,4]),
-        };
 
-        let testes: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(vec![0.0; 1024]));
-        let cb_buf = testes.clone();
-        let listener = stream
-            .add_local_listener_with_user_data(audio_data)
-            .param_changed(|stream, user_data, id, param| {
-                let Some(param) = param else {
-                    return;
-                };
-            })
-            .process(|stream, audio_data| match stream.dequeue_buffer() {
-                None => println!("No buffer received"),
-                Some(mut buffer) => {
-                    let datas = buffer.datas_mut();
-                    let mut data = &mut datas[0];
-                    let bytes = data.data().unwrap();
-                    let slice = &bytes[0..4];
-                    let sample = f32::from_le_bytes(slice.try_into().unwrap());
-                    thread::sleep(Duration::from_secs(1));
-                    println!("{}", sample);
-                    // {
-                    //     let mut x = audio_data.write_buffer.push(sample);
-                    //     drop(x);
-                    // }
-                    // println!("{}", sample);
-                }
-            })
-            .register()?;
-        Ok(listener)
+        Self {
+            audio_core: audio_core,
+            audio_streams: vec![audio_stream],
+            audio_listeners: vec![listener],
+            audio_buffer_cons: cons,
+        }
+    }
+    pub fn dump() -> Vec<f32> {
+
     }
 }
 
+fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<f32>) -> Result<StreamListener<AudioData>, Box<dyn Error>> {
+    let audio_data = AudioData {
+        format: Default::default(),
+    };
 
+    let listener = stream
+        .add_local_listener_with_user_data(audio_data)
+        .param_changed(|stream, user_data, id, param| {
+            let Some(param) = param else {
+                return;
+            };
+        })
+        .process(move |stream, audio_data| match stream.dequeue_buffer() {
+            None => println!("No buffer received"),
+            Some(mut buffer) => {
+                let datas = buffer.datas_mut();
+                let mut data = &mut datas[0];
+                let bytes = data.data().unwrap();
+                let slice = &bytes[0..4];
+                let sample = f32::from_le_bytes(slice.try_into().unwrap());
+                prod.try_push(sample);
+                // {
+                //     let mut x = audio_data.write_buffer.push(sample);
+                //     drop(x);
+                // }
+                println!("{}", sample);
+            }
+        })
+        .register()?;
+    Ok(listener)
+}
 //probably turn these into traits
 fn create_audio_stream(audio_core: CoreRc) -> Result<StreamRc, Box<dyn Error>> {
     let stream = StreamRc::new(

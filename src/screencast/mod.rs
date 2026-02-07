@@ -58,7 +58,7 @@ impl<'oguri> ScreenCastSession<'oguri> {
     }
     pub async fn start(&self) -> Result<OwnedObjectPath, Box<dyn Error>> {
         let args = HashMap::from([("handle_token", Value::new("oguri"))]);
-
+        
         Ok(self.proxy.Start(&self.session_handle, "", &args).await?)
     }
 
