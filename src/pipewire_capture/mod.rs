@@ -9,7 +9,7 @@ use std::os::fd::OwnedFd;
 use video::Video;
 
 use crate::main;
-pub struct PipewireManager{
+pub struct PipewireManager {
     main_loop: MainLoopRc,
     context: ContextRc,
     registry: RegistryRc,
@@ -51,9 +51,9 @@ impl PipewireManager {
     //     });
     //     self.attached_receiver.replace(Some(receiver));
     // }
-    pub fn run(&self,pw_rx: channel::Receiver<TERMINATE>) -> Result<(), Box<dyn Error>> {
+    pub fn run(&self, pw_rx: channel::Receiver<TERMINATE>) -> Result<(), Box<dyn Error>> {
         let receiver = pw_rx.attach(self.main_loop.loop_(), {
-        let main_loop = self.main_loop.clone();
+            let main_loop = self.main_loop.clone();
             move |_| main_loop.quit()
         });
         self.main_loop.run();

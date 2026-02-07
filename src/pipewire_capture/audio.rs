@@ -2,6 +2,7 @@ use crate::circular_buffer::CircularBuffer;
 use futures_util::lock::Mutex;
 use pipewire::core::CoreRc;
 use pipewire::properties::properties;
+use pipewire::spa::param::audio;
 use pipewire::spa::{
     param::{
         ParamType,
@@ -13,9 +14,12 @@ use pipewire::spa::{
 use pipewire::stream::{StreamFlags, StreamListener, StreamRc};
 use ringbuf::HeapRb;
 use ringbuf::storage::Heap;
-use ringbuf::traits::{Producer, Split};
+use ringbuf::traits::{Consumer, Producer, Split};
 use std::cell::RefCell;
 use std::error::Error;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
@@ -56,8 +60,16 @@ impl Audio {
             audio_buffer_cons: cons,
         }
     }
-    pub fn dump() -> Vec<f32> {
-
+    pub fn dump(&mut self) {
+        let mut data = vec![0f32; (DEFAULT_RATE * 30).try_into().unwrap()];
+        self.audio_buffer_cons.pop_slice(&mut data);
+        let path = Path::new("dump");
+        let mut file = File::create(path).unwrap();
+        for x in data.iter(){
+            let temp = x.to_le_bytes();
+            file.write_all(&temp).unwrap();
+    
+        }
     }
 }
 
@@ -86,7 +98,7 @@ fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<f32>) -> 
                 //     let mut x = audio_data.write_buffer.push(sample);
                 //     drop(x);
                 // }
-                println!("{}", sample);
+                // println!("{}", sample);
             }
         })
         .register()?;

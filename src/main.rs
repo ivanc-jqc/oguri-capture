@@ -30,6 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let _pw_thread = thread::spawn(move|| {
         let mut pw_man = PipewireManager::new(pw_fd);
         pw_man.run(pw_rx);
+        pw_man.audio.dump();
         // let mut binding = pw_man.audio.audio_buffer.borrow_mut();
         // let vec = binding.dump().clone();
         // drop(binding);
@@ -52,11 +53,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
     
     let mut buffer = String::new();
-    // io::stdin().read_line(&mut buffer);
-    thread::sleep(Duration::from_secs(40));
+    io::stdin().read_line(&mut buffer);
+    // thread::sleep(Duration::from_secs(40));
     pw_tx.send(TERMINATE);
-    thread::sleep(Duration::from_secs(10));
-    // dbg!(buffer);
+    // thread::sleep(Duration::from_secs(10));
+    dbg!(buffer);
+    _pw_thread.join().unwrap();
     
     Ok(())
 }
