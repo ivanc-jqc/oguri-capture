@@ -25,7 +25,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
 use std::{mem, thread};
 use std::time::Duration;
-pub const DEFAULT_RATE: u32 = 100;
+pub const DEFAULT_RATE: u32 = 44100;
 pub const DEFAULT_CHANNELS: u32 = 1;
 pub struct AudioData {
     format: AudioInfoRaw,
@@ -76,11 +76,13 @@ impl Audio {
             let end = start + f32_size;
             let slice = &data[start..end];
             let sample = f32::from_le_bytes(slice.try_into().unwrap());
-            println!("{}", sample);
+            // println!("{}", sample);
+            let temp = sample.to_le_bytes();
+            file.write_all(&temp).unwrap();
         }
         // for x in data.iter(){
         //     let temp = x.to_le_bytes();
-        //     file.write_all(&temp).unwrap();
+        //     
     
         // }
     }
@@ -103,20 +105,9 @@ fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<u8>) -> R
             Some(mut buffer) => {
                 let datas = buffer.datas_mut();
                 let mut data = &mut datas[0];
-                let f32_size = mem::size_of::<f32>();
-                let samples_num = data.chunk().size() as usize /f32_size;
+                let size = data.chunk().size() as usize;
                 let bytes = data.data().unwrap();
-
-                prod.push_slice(&bytes[0..samples_num*f32_size]);
-                // for x in 0..samples_num {
-                //     let start = x as usize * f32_size;
-                //     let end = start + f32_size;
-                //     let slice = &bytes[start..end];
-                //     let sample = f32::from_le_bytes(slice.try_into().unwrap());
-                //     prod.push_slice(slice);
-                //     println!("{}", sample);
-                    
-                // }
+                prod.push_slice(&bytes[0..size]);
             }
         })
         .register()?;
