@@ -23,9 +23,9 @@ use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
-use std::thread;
+use std::{mem, thread};
 use std::time::Duration;
-pub const DEFAULT_RATE: u32 = 44100;
+pub const DEFAULT_RATE: u32 = 100;
 pub const DEFAULT_CHANNELS: u32 = 1;
 pub struct AudioData {
     format: AudioInfoRaw,
@@ -34,11 +34,11 @@ pub struct Audio {
     audio_core: CoreRc,
     audio_streams: Vec<StreamRc>,
     audio_listeners: Vec<StreamListener<AudioData>>,
-    pub audio_buffer_cons: ringbuf::HeapCons<f32>,
+    pub audio_buffer_cons: ringbuf::HeapCons<u8>,
 }
 impl Audio {
     pub fn new(audio_core: CoreRc) -> Self {
-        let temp = HeapRb::<f32>::new((DEFAULT_RATE * 30).try_into().unwrap());
+        let temp = HeapRb::<u8>::new((DEFAULT_RATE * 30).try_into().unwrap());
         let audio_stream = create_audio_stream(audio_core.clone()).unwrap();
         let (mut prod, mut cons) = temp.split();
         let listener = attach_audio_listener(audio_stream.clone(),prod).unwrap();
@@ -61,19 +61,32 @@ impl Audio {
         }
     }
     pub fn dump(&mut self) {
-        let mut data = vec![0f32; (DEFAULT_RATE * 30).try_into().unwrap()];
+        let f32_size = mem::size_of::<f32>();
+        
+        let mut data = [0u8; (DEFAULT_RATE * 30) as usize];
         self.audio_buffer_cons.pop_slice(&mut data);
+
         let path = Path::new("output/dump");
         let mut file = File::create(path).unwrap();
-        for x in data.iter(){
-            let temp = x.to_le_bytes();
-            file.write_all(&temp).unwrap();
-    
+        
+        let n_samples = data.len()/f32_size;
+        
+        for i in 0..n_samples {
+            let start = i as usize * f32_size;
+            let end = start + f32_size;
+            let slice = &data[start..end];
+            let sample = f32::from_le_bytes(slice.try_into().unwrap());
+            println!("{}", sample);
         }
+        // for x in data.iter(){
+        //     let temp = x.to_le_bytes();
+        //     file.write_all(&temp).unwrap();
+    
+        // }
     }
 }
 
-fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<f32>) -> Result<StreamListener<AudioData>, Box<dyn Error>> {
+fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<u8>) -> Result<StreamListener<AudioData>, Box<dyn Error>> {
     let audio_data = AudioData {
         format: Default::default(),
     };
@@ -90,15 +103,20 @@ fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<f32>) -> 
             Some(mut buffer) => {
                 let datas = buffer.datas_mut();
                 let mut data = &mut datas[0];
+                let f32_size = mem::size_of::<f32>();
+                let samples_num = data.chunk().size() as usize /f32_size;
                 let bytes = data.data().unwrap();
-                let slice = &bytes[0..4];
-                let sample = f32::from_le_bytes(slice.try_into().unwrap());
-                prod.try_push(sample);
-                // {
-                //     let mut x = audio_data.write_buffer.push(sample);
-                //     drop(x);
+
+                prod.push_slice(&bytes[0..samples_num*f32_size]);
+                // for x in 0..samples_num {
+                //     let start = x as usize * f32_size;
+                //     let end = start + f32_size;
+                //     let slice = &bytes[start..end];
+                //     let sample = f32::from_le_bytes(slice.try_into().unwrap());
+                //     prod.push_slice(slice);
+                //     println!("{}", sample);
+                    
                 // }
-                // println!("{}", sample);
             }
         })
         .register()?;
