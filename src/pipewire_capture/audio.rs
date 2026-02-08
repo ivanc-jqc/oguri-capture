@@ -1,8 +1,6 @@
-use crate::circular_buffer::CircularBuffer;
-use futures_util::lock::Mutex;
 use pipewire::core::CoreRc;
 use pipewire::properties::properties;
-use pipewire::spa::param::audio;
+
 use pipewire::spa::{
     param::{
         ParamType,
@@ -12,21 +10,19 @@ use pipewire::spa::{
     utils::Direction,
 };
 use pipewire::stream::{StreamFlags, StreamListener, StreamRc};
+
 use ringbuf::HeapRb;
-use ringbuf::storage::Heap;
 use ringbuf::traits::{Consumer, Producer, Split};
-use std::cell::RefCell;
+
 use std::error::Error;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use std::rc::Rc;
-use std::sync::Arc;
-use std::sync::atomic::AtomicU32;
-use std::{mem, thread};
-use std::time::Duration;
+use std::mem;
+use std::process::Command;
+
 pub const DEFAULT_RATE: u32 = 44100;
-pub const DEFAULT_CHANNELS: u32 = 1;
+pub const DEFAULT_CHANNELS: u32 = 2;
 pub struct AudioData {
     format: AudioInfoRaw,
 }
@@ -62,7 +58,7 @@ impl Audio {
     }
     pub fn dump(&mut self) {
         let f32_size = mem::size_of::<f32>();
-        
+
         let mut data = [0u8; (DEFAULT_RATE * 30) as usize];
         self.audio_buffer_cons.pop_slice(&mut data);
 
@@ -80,6 +76,20 @@ impl Audio {
             let temp = sample.to_le_bytes();
             file.write_all(&temp).unwrap();
         }
+        let ffmpeg = Command::new("ffmpeg")
+            .arg("-f")
+            .arg("f32le")
+            .arg("-ar")
+            .arg("44100")
+            .arg("-ac")
+            .arg("2")
+            .arg("-i")
+            .arg("output/dump")
+            .arg("output.wav")
+            .arg("-y")
+            .output()
+            .expect("Failed to execute command");
+        println!("{:?}", ffmpeg.stdout);
         // for x in data.iter(){
         //     let temp = x.to_le_bytes();
         //     
@@ -132,10 +142,10 @@ fn create_stream_params_bytes() -> Vec<u8> {
     audio_info.set_format(AudioFormat::F32LE);
     audio_info.set_rate(DEFAULT_RATE);
     audio_info.set_channels(DEFAULT_CHANNELS);
-    // let mut position = [0; pipewire::spa::param::audio::MAX_CHANNELS];
-    // position[0] = libspa_sys::SPA_AUDIO_CHANNEL_FL;
-    // position[1] = libspa_sys::SPA_AUDIO_CHANNEL_FR;
-    // audio_info.set_position(position);
+    let mut position = [0; pipewire::spa::param::audio::MAX_CHANNELS];
+    position[0] = libspa_sys::SPA_AUDIO_CHANNEL_FL;
+    position[1] = libspa_sys::SPA_AUDIO_CHANNEL_FR;
+    audio_info.set_position(position);
 
     let pod_object = Object {
         type_: pipewire::spa::utils::SpaTypes::ObjectParamFormat.as_raw(),
