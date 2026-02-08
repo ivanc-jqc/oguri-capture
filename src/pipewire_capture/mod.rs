@@ -21,7 +21,7 @@ pub struct PipewireManager {
 pub struct TERMINATE;
 
 impl PipewireManager {
-    pub fn new(fd: OwnedFd) -> Self {
+    pub fn new(fd: OwnedFd,node_id: u32) -> Self {
         let mainloop = MainLoopRc::new(None).unwrap();
         let temp = mainloop.clone();
 
@@ -41,7 +41,7 @@ impl PipewireManager {
             registry: registry,
             registry_listener: reg_listener,
             audio: Audio::new(audio_core),
-            video: Video::new(video_core),
+            video: Video::new(video_core,node_id),
         }
     }
     // pub fn attach_receiver(&self,pw_rx:) {
