@@ -63,7 +63,7 @@ impl Audio {
     pub fn dump(&mut self) {
         let mut data = vec![0f32; (DEFAULT_RATE * 30).try_into().unwrap()];
         self.audio_buffer_cons.pop_slice(&mut data);
-        let path = Path::new("dump");
+        let path = Path::new("output/dump");
         let mut file = File::create(path).unwrap();
         for x in data.iter(){
             let temp = x.to_le_bytes();
