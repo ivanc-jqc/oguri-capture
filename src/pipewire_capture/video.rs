@@ -106,10 +106,43 @@ fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<u8>) -> R
 
     let listener = stream
         .add_local_listener_with_user_data(video_data)
+        .state_changed(|_, _, old, new| {
+            // println!("State changed: {:?} -> {:?}", old, new);
+        })
         .param_changed(|stream, user_data, id, param| {
             let Some(param) = param else {
                 return;
             };
+            if id != pipewire::spa::param::ParamType::Format.as_raw() {
+                return;
+            }
+
+            let (media_type, media_subtype) =
+                match pipewire::spa::param::format_utils::parse_format(param) {
+                    Ok(v) => v,
+                    Err(_) => return,
+                };
+
+            if media_type != pipewire::spa::param::format::MediaType::Video
+                || media_subtype != pipewire::spa::param::format::MediaSubtype::Raw
+            {
+                return;
+            }
+
+
+
+            user_data.format.parse(param).expect("OAJDSOAJDOA");
+            println!(
+                "  size: {}x{}",
+                user_data.format.size().width,
+                user_data.format.size().height
+            );
+            println!(
+                "  framerate: {}/{}",
+                user_data.format.framerate().num,
+                user_data.format.framerate().denom
+            );
+
         })
         .process(move |stream, video_data| match stream.dequeue_buffer() {
             None => println!("No buffer received"),
