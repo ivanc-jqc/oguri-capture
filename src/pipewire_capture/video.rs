@@ -1,12 +1,12 @@
 use pipewire::core::CoreRc;
 use pipewire::properties::properties;
 
+use pipewire::spa::param::format_utils;
+use pipewire::spa::param::format::FormatProperties;
 use pipewire::spa::param::video::VideoInfoRaw;
+use pipewire::spa::pod::{Value, deserialize};
 use pipewire::spa::{
-    param::{
-        ParamType,
-        video::{VideoFormat},
-    },
+    param::{ParamType, video::VideoFormat},
     pod::{Object, Pod},
     utils::Direction,
 };
@@ -18,8 +18,8 @@ use ringbuf::traits::{Consumer, Producer, Split};
 use std::error::Error;
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
 use std::mem;
+use std::path::Path;
 use std::process::Command;
 
 pub const DEFAULT_RATE: u32 = 44100;
@@ -38,14 +38,14 @@ impl Video {
         let temp = HeapRb::<u8>::new((DEFAULT_RATE * 30).try_into().unwrap());
         let video_stream = create_video_stream(video_core.clone()).unwrap();
         let (mut prod, mut cons) = temp.split();
-        let listener = attach_audio_listener(video_stream.clone(),prod).unwrap();
+        let listener = attach_audio_listener(video_stream.clone(), prod).unwrap();
         let video_stream_params_data = create_stream_params_bytes();
         let mut video_stream_params = [Pod::from_bytes(&video_stream_params_data).unwrap()];
         video_stream
             .connect(
                 Direction::Input,
                 Some(node_id), //which node to listen to
-                StreamFlags::AUTOCONNECT | StreamFlags::MAP_BUFFERS | StreamFlags::RT_PROCESS,
+                StreamFlags::AUTOCONNECT | StreamFlags::MAP_BUFFERS,
                 &mut video_stream_params,
             )
             .unwrap();
@@ -58,16 +58,16 @@ impl Video {
         }
     }
     pub fn dump(&mut self) {
-        let f32_size: usize = 4 ;
+        let f32_size: usize = 4;
 
         let mut data = [0u8; (DEFAULT_RATE * 30) as usize];
         self.audio_buffer_cons.pop_slice(&mut data);
 
         let path = Path::new("output/viddump");
         let mut file = File::create(path).unwrap();
-        
-        let n_samples = data.len()/f32_size;
-        
+
+        let n_samples = data.len() / f32_size;
+
         for i in 0..n_samples {
             let start = i as usize * f32_size;
             let end = start + f32_size;
@@ -93,13 +93,16 @@ impl Video {
         // println!("{:?}", ffmpeg.stdout);
         // for x in data.iter(){
         //     let temp = x.to_le_bytes();
-        //     
-    
+        //
+
         // }
     }
 }
 
-fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<u8>) -> Result<StreamListener<VideoData>, Box<dyn Error>> {
+fn attach_audio_listener(
+    stream: StreamRc,
+    mut prod: ringbuf::HeapProd<u8>,
+) -> Result<StreamListener<VideoData>, Box<dyn Error>> {
     let video_data = VideoData {
         format: Default::default(),
     };
@@ -107,12 +110,13 @@ fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<u8>) -> R
     let listener = stream
         .add_local_listener_with_user_data(video_data)
         .state_changed(|_, _, old, new| {
-            // println!("State changed: {:?} -> {:?}", old, new);
+            println!("State changed: {:?} -> {:?}", old, new);
         })
         .param_changed(|stream, user_data, id, param| {
             let Some(param) = param else {
                 return;
             };
+            dbg!(ParamType::from_raw(id));
             if id != pipewire::spa::param::ParamType::Format.as_raw() {
                 return;
             }
@@ -128,21 +132,25 @@ fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<u8>) -> R
             {
                 return;
             }
-
-
-
-            user_data.format.parse(param).expect("OAJDSOAJDOA");
-            println!(
-                "  size: {}x{}",
-                user_data.format.size().width,
-                user_data.format.size().height
-            );
-            println!(
-                "  framerate: {}/{}",
-                user_data.format.framerate().num,
-                user_data.format.framerate().denom
-            );
-
+            // pipewire::spa::pod::deserialize::PodDeserializer::de(param);
+            let temp = param.as_object().unwrap();
+            for x in temp.props() {
+                if x.key().0 == FormatProperties::VideoFramerate.0 {
+                    dbg!("WAHOOO!");
+                }
+                // dbg!(x.key());
+            }
+            // user_data.format.parse(param).expect("OAJDSOAJDOA");
+            // println!(
+            //     "  size: {}x{}",
+            //     user_data.format.size().width,
+            //     user_data.format.size().height
+            // );
+            // println!(
+            //     "  framerate: {}/{}",
+            //     user_data.format.framerate().num,
+            //     user_data.format.framerate().denom
+            // );
         })
         .process(move |stream, video_data| match stream.dequeue_buffer() {
             None => println!("No buffer received"),
@@ -172,7 +180,7 @@ fn create_video_stream(video_core: CoreRc) -> Result<StreamRc, Box<dyn Error>> {
 }
 
 fn create_stream_params_bytes() -> Vec<u8> {
-     let pod_object = pipewire::spa::pod::object!(
+    let pod_object = pipewire::spa::pod::object!(
         pipewire::spa::utils::SpaTypes::ObjectParamFormat,
         pipewire::spa::param::ParamType::EnumFormat,
         pipewire::spa::pod::property!(
@@ -187,16 +195,15 @@ fn create_stream_params_bytes() -> Vec<u8> {
         ),
         pipewire::spa::pod::property!(
             pipewire::spa::param::format::FormatProperties::VideoFormat,
-            Choice,
-            Enum,
+            // Choice,
+            // Enum,
             Id,
-            pipewire::spa::param::video::VideoFormat::RGB,
-            pipewire::spa::param::video::VideoFormat::RGB,
-            pipewire::spa::param::video::VideoFormat::RGBA,
-            pipewire::spa::param::video::VideoFormat::RGBx,
-            pipewire::spa::param::video::VideoFormat::BGRx,
-            pipewire::spa::param::video::VideoFormat::YUY2,
-            pipewire::spa::param::video::VideoFormat::I420,
+            // pipewire::spa::param::video::VideoFormat::RGB,
+            // pipewire::spa::param::video::VideoFormat::RGB,
+            // pipewire::spa::param::video::VideoFormat::RGBA,
+            // pipewire::spa::param::video::VideoFormat::RGBx,
+            pipewire::spa::param::video::VideoFormat::BGRx // pipewire::spa::param::video::VideoFormat::YUY2,
+                                                           // pipewire::spa::param::video::VideoFormat::I420,
         ),
         pipewire::spa::pod::property!(
             pipewire::spa::param::format::FormatProperties::VideoSize,
@@ -204,16 +211,16 @@ fn create_stream_params_bytes() -> Vec<u8> {
             Range,
             Rectangle,
             pipewire::spa::utils::Rectangle {
-                width: 320,
-                height: 240
+                width: 1920,
+                height: 1080
             },
             pipewire::spa::utils::Rectangle {
-                width: 1,
-                height: 1
+                width: 1920,
+                height: 1080
             },
             pipewire::spa::utils::Rectangle {
-                width: 4096,
-                height: 4096
+                width: 1920,
+                height: 1080
             }
         ),
         pipewire::spa::pod::property!(
@@ -229,7 +236,6 @@ fn create_stream_params_bytes() -> Vec<u8> {
             }
         ),
     );
-
 
     let values: Vec<u8> = pipewire::spa::pod::serialize::PodSerializer::serialize(
         std::io::Cursor::new(Vec::new()),

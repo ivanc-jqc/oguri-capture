@@ -6,6 +6,7 @@ use pipewire::registry::{self, RegistryRc};
 use std::cell::{Cell, RefCell};
 use std::error::Error;
 use std::os::fd::OwnedFd;
+use std::time::Duration;
 use video::Video;
 
 use crate::main;
@@ -21,10 +22,9 @@ pub struct PipewireManager {
 pub struct TERMINATE;
 
 impl PipewireManager {
-    pub fn new(fd: OwnedFd,node_id: u32) -> Self {
+    pub fn new(fd: OwnedFd, node_id: u32) -> Self {
         let mainloop = MainLoopRc::new(None).unwrap();
-        let temp = mainloop.clone();
-
+        
         let context = ContextRc::new(&mainloop, None).unwrap();
         let audio_core = context.connect_rc(None).unwrap();
         let video_core = context.connect_fd_rc(fd, None).unwrap();
@@ -35,13 +35,14 @@ impl PipewireManager {
                 // dbg!(global);
             })
             .register();
+
         Self {
             main_loop: mainloop,
             context: context,
             registry: registry,
             registry_listener: reg_listener,
             audio: Audio::new(audio_core),
-            video: Video::new(video_core,node_id),
+            video: Video::new(video_core, node_id),
         }
     }
     // pub fn attach_receiver(&self,pw_rx:) {

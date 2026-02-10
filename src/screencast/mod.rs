@@ -48,7 +48,7 @@ impl<'oguri> ScreenCastSession<'oguri> {
             // ("types", Value::new(1u32)),
             // ("multiple", Value::new(false)),
             // ("cursor_mode", Value::new(2u32)),
-            // ("persist_mode", Value::new(1u32))
+            ("persist_mode", Value::new(1u32))
         ]);
         
         Ok(self

@@ -106,7 +106,7 @@ fn attach_audio_listener(stream: StreamRc, mut prod: ringbuf::HeapProd<u8>) -> R
     let listener = stream
         .add_local_listener_with_user_data(audio_data)
         .state_changed(|_, _, old, new| {
-            println!("State changed: {:?} -> {:?}", old, new);
+            // println!("State changed: {:?} -> {:?}", old, new);
         })
         .param_changed(|stream, user_data, id, param| {
             let Some(param) = param else {
