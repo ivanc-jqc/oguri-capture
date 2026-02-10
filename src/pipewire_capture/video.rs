@@ -18,7 +18,7 @@ use ringbuf::traits::{Consumer, Producer, Split};
 use std::error::Error;
 use std::fs::File;
 use std::io::Write;
-use std::mem;
+use std::{mem, num};
 use std::path::Path;
 use std::process::Command;
 
@@ -37,7 +37,7 @@ pub struct Video {
 }
 impl Video {
     pub fn new(video_core: CoreRc, node_id: u32) -> Self {
-        let temp = HeapRb::<u8>::new((FRAME_RATE * WINDOW_SIZE * CLIP_DURATION * 4).try_into().unwrap());
+        let temp = HeapRb::<u8>::new((WINDOW_SIZE).try_into().unwrap());
         let video_stream = create_video_stream(video_core.clone()).unwrap();
         let (mut prod, mut cons) = temp.split();
         let listener = attach_audio_listener(video_stream.clone(), prod).unwrap();
@@ -59,40 +59,46 @@ impl Video {
             audio_buffer_cons: cons,
         }
     }
-    pub fn dump(&mut self) {
-        let path = Path::new("output/viddump");
-        let mut file = File::create(path).unwrap();
-        let bgrx_size: usize = 4;
+    // pub fn dump(&mut self) {
+    //     let path = Path::new("output/viddump");
+    //     let mut file = File::create(path).unwrap();
+    //     let bgrx_size: usize = 4;
 
-        for _num_slices in 0..CLIP_DURATION*bgrx_size as u64 {
+    //     for _num_slices in 0..CLIP_DURATION*bgrx_size as u64 {
 
-            //YO!!!! THIS CAN CAUSE STACK OVERFLOW!!!!
-            let mut data = [0u8; (WINDOW_SIZE) as usize];
-            self.audio_buffer_cons.pop_slice(&mut data);
-            let num_of_pixels = WINDOW_SIZE/4;
-            // for x in 
-            file.write_all(&data);
-        }
-        // let ffmpeg = Command::new("ffmpeg")
-        //     .arg("-f")
-        //     .arg("f32le")
-        //     .arg("-ar")
-        //     .arg("44100")
-        //     .arg("-ac")
-        //     .arg("2")
-        //     .arg("-i")
-        //     .arg("output/dump")
-        //     .arg("output.wav")
-        //     .arg("-y")
-        //     .output()
-        //     .expect("Failed to execute command");
-        // println!("{:?}", ffmpeg.stdout);
-        // for x in data.iter(){
-        //     let temp = x.to_le_bytes();
-        //
+    //         //YO!!!! THIS CAN CAUSE STACK OVERFLOW!!!!
+    //         let mut data = [0u8; (WINDOW_SIZE) as usize];
+    //         self.audio_buffer_cons.pop_slice(&mut data);
+    //         let num_of_pixels = WINDOW_SIZE as usize/bgrx_size;
+    //         for x in 0..num_of_pixels {
+    //             let start = x;
+    //             let end = start + bgrx_size;
+    //             let pixel_slice = &data[start..end];
+    //             let new_slice = [pixel_slice[2], pixel_slice[1], pixel_slice[0]]; 
+    //             println!("{:?}", new_slice);
+    //         }
+    //         //  file.write_all();
+    //     }
+    //     // let ffmpeg = Command::new("ffmpeg")
+    //     //     .arg("-f")
+    //     //     .arg("f32le")
+    //     //     .arg("-ar")
+    //     //     .arg("44100")
+    //     //     .arg("-ac")
+    //     //     .arg("2")
+    //     //     .arg("-i")
+    //     //     .arg("output/dump")
+    //     //     .arg("output.wav")
+    //     //     .arg("-y")
+    //     //     .output()
+    //     //     .expect("Failed to execute command");
+    //     // println!("{:?}", ffmpeg.stdout);
+    //     // for x in data.iter(){
+    //     //     let temp = x.to_le_bytes();
+    //     //
 
-        // }
-    }
+    //     // }
+    // }
 }
 
 fn attach_audio_listener(
@@ -229,7 +235,7 @@ fn create_stream_params_bytes() -> Vec<u8> {
             pipewire::spa::utils::Fraction { num: 60, denom: 1 },
             pipewire::spa::utils::Fraction { num: 0, denom: 1 },
             pipewire::spa::utils::Fraction {
-                num: 1000,
+                num: 60,
                 denom: 1
             }
         ),
