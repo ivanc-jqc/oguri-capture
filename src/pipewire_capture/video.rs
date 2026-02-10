@@ -22,7 +22,9 @@ use std::mem;
 use std::path::Path;
 use std::process::Command;
 
-pub const DEFAULT_RATE: u32 = 44100;
+pub const FRAME_RATE: u32 = 60;
+pub const WINDOW_SIZE: u32 = 1920*1080;
+pub const CLIP_DURATION: u32 = 30;
 pub const DEFAULT_CHANNELS: u32 = 2;
 pub struct VideoData {
     format: VideoInfoRaw,
@@ -35,7 +37,7 @@ pub struct Video {
 }
 impl Video {
     pub fn new(video_core: CoreRc, node_id: u32) -> Self {
-        let temp = HeapRb::<u8>::new((DEFAULT_RATE * 30).try_into().unwrap());
+        let temp = HeapRb::<u8>::new((FRAME_RATE * WINDOW_SIZE * CLIP_DURATION).try_into().unwrap());
         let video_stream = create_video_stream(video_core.clone()).unwrap();
         let (mut prod, mut cons) = temp.split();
         let listener = attach_audio_listener(video_stream.clone(), prod).unwrap();
@@ -58,24 +60,23 @@ impl Video {
         }
     }
     pub fn dump(&mut self) {
-        let f32_size: usize = 4;
+        let bgrx_size: usize = 4;
 
-        let mut data = [0u8; (DEFAULT_RATE * 30) as usize];
+        let mut data = [0u8; (FRAME_RATE * WINDOW_SIZE * CLIP_DURATION) as usize];
         self.audio_buffer_cons.pop_slice(&mut data);
 
         let path = Path::new("output/viddump");
         let mut file = File::create(path).unwrap();
 
-        let n_samples = data.len() / f32_size;
+        let n_frames = data.len() / bgrx_size;
 
-        for i in 0..n_samples {
-            let start = i as usize * f32_size;
-            let end = start + f32_size;
+        for i in 0..n_frames {
+            let start = i as usize * bgrx_size;
+            let end = start + bgrx_size;
             let slice = &data[start..end];
-            let sample = (slice[0], slice[1], slice[2], slice[3]);
-            println!("{:?}", sample);
-            // let temp = sample.to_le_bytes();
-            // file.write_all(&temp).unwrap();
+            // let sample = (slice[0], slice[1], slice[2], slice[3]);
+            // println!("{:?}", sample);
+            file.write_all(&slice).unwrap();
         }
         // let ffmpeg = Command::new("ffmpeg")
         //     .arg("-f")
@@ -143,7 +144,6 @@ fn attach_audio_listener(
             dbg!(user_data.format);
             
             user_data.format.parse(param).expect("OAJDSOAJDOA");
-            dbg!(user_data.format);
             // println!(
             //     "  size: {}x{}",
             //     user_data.format.size().width,
