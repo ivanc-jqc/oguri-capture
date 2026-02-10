@@ -133,14 +133,17 @@ fn attach_audio_listener(
                 return;
             }
             // pipewire::spa::pod::deserialize::PodDeserializer::de(param);
-            let temp = param.as_object().unwrap();
-            for x in temp.props() {
-                if x.key().0 == FormatProperties::VideoFramerate.0 {
-                    dbg!("WAHOOO!");
-                }
-                // dbg!(x.key());
-            }
-            // user_data.format.parse(param).expect("OAJDSOAJDOA");
+            // let temp = param.as_object().unwrap();
+            // for x in temp.props() {
+            //     if x.key().0 == FormatProperties::VideoFramerate.0 {
+            //         let val = x.value();
+            //     }
+            //     // dbg!(x.key());
+            // }
+            dbg!(user_data.format);
+            
+            user_data.format.parse(param).expect("OAJDSOAJDOA");
+            dbg!(user_data.format);
             // println!(
             //     "  size: {}x{}",
             //     user_data.format.size().width,
