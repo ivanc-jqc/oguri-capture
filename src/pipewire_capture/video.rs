@@ -126,26 +126,28 @@ fn attach_audio_listener(
         .arg("zerolatency")
         .arg("-movflags")
         .arg("frag_keyframe+empty_moov")
-        // .arg("pipe:1")
-        .arg("output/test.mp4")
+        .arg("pipe:1")
+        // .arg("output/test.mp4")
         .arg("-y")
         .stdin(Stdio::piped())
-        // .stdout(Stdio::piped())
+        .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to execute command");
     let mut stdin = test.stdin.take().unwrap();
     std::thread::spawn(move || {
         for frames in 0..10 {
-        for x in 0..768 {
-            stdin
-                .write_all(&[(frames)*25, 255, 0])
-                .expect("Failed to write to stdin");
+            for x in 0..768 {
+                stdin
+                    .write_all(&[(frames) * 25, 255, 0])
+                    .expect("Failed to write to stdin");
+            }
         }
-    }
     });
     let output = test.wait_with_output().unwrap();
-
-    // println!("{:?}", String::from_utf8_lossy(&output.stdout));
+    let path = Path::new("output/testes.mp4");
+    let mut file = File::create(path).unwrap();
+    file.write_all(&output.stdout).unwrap();
+    println!("{:?}", &output.stdout);
 
     let listener = stream
         .add_local_listener_with_user_data(video_data)
