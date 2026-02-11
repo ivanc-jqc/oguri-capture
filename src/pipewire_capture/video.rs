@@ -1,8 +1,8 @@
 use pipewire::core::CoreRc;
 use pipewire::properties::properties;
 
-use pipewire::spa::param::format_utils;
 use pipewire::spa::param::format::FormatProperties;
+use pipewire::spa::param::format_utils;
 use pipewire::spa::param::video::VideoInfoRaw;
 use pipewire::spa::pod::{Value, deserialize};
 use pipewire::spa::{
@@ -18,12 +18,12 @@ use ringbuf::traits::{Consumer, Producer, Split};
 use std::error::Error;
 use std::fs::File;
 use std::io::Write;
-use std::{mem, num};
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::{mem, num};
 
 pub const FRAME_RATE: u64 = 60;
-pub const WINDOW_SIZE: u64 = 1920*1080;
+pub const WINDOW_SIZE: u64 = 1920 * 1080;
 pub const CLIP_DURATION: u64 = 30;
 pub const DEFAULT_CHANNELS: u32 = 2;
 pub struct VideoData {
@@ -74,7 +74,7 @@ impl Video {
     //             let start = x;
     //             let end = start + bgrx_size;
     //             let pixel_slice = &data[start..end];
-    //             let new_slice = [pixel_slice[2], pixel_slice[1], pixel_slice[0]]; 
+    //             let new_slice = [pixel_slice[2], pixel_slice[1], pixel_slice[0]];
     //             println!("{:?}", new_slice);
     //         }
     //         //  file.write_all();
@@ -108,6 +108,31 @@ fn attach_audio_listener(
     let video_data = VideoData {
         format: Default::default(),
     };
+    let mut test = Command::new("ffmpeg")
+        .arg("-f")
+        .arg("rawvideo")
+        .arg("-s:v")
+        .arg("1920x1080")
+        .arg("-i")
+        .arg("pipe:")
+        .arg("-f")
+        .arg("mp4")
+        .arg("-c:v")
+        .arg("libx264")
+        .arg("pipe:")
+        .stdin(Stdio::piped())
+        // .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to execute command");
+    let mut stdin = test.stdin.take().unwrap();
+    std::thread::spawn(move || {
+        // stdin
+        //     // .write_all(&[0,255,0])
+        //     .expect("Failed to write to stdin");
+    });
+    let output = test.wait_with_output().unwrap();
+
+    println!("{:?}", String::from_utf8_lossy(&output.stdout));
 
     let listener = stream
         .add_local_listener_with_user_data(video_data)
@@ -118,7 +143,7 @@ fn attach_audio_listener(
             let Some(param) = param else {
                 return;
             };
-            dbg!(ParamType::from_raw(id));
+            // dbg!(ParamType::from_raw(id));
             if id != pipewire::spa::param::ParamType::Format.as_raw() {
                 return;
             }
@@ -142,8 +167,8 @@ fn attach_audio_listener(
             //     }
             //     // dbg!(x.key());
             // }
-            dbg!(user_data.format);
-            
+            // dbg!(user_data.format);
+
             user_data.format.parse(param).expect("OAJDSOAJDOA");
             // println!(
             //     "  size: {}x{}",
@@ -234,10 +259,7 @@ fn create_stream_params_bytes() -> Vec<u8> {
             Fraction,
             pipewire::spa::utils::Fraction { num: 60, denom: 1 },
             pipewire::spa::utils::Fraction { num: 0, denom: 1 },
-            pipewire::spa::utils::Fraction {
-                num: 60,
-                denom: 1
-            }
+            pipewire::spa::utils::Fraction { num: 60, denom: 1 }
         ),
     );
 
