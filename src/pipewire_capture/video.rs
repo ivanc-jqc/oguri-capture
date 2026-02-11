@@ -109,28 +109,39 @@ fn attach_audio_listener(
         format: Default::default(),
     };
     let mut test = Command::new("ffmpeg")
+        .arg("-hide_banner")
         .arg("-f")
         .arg("rawvideo")
+        .arg("-pix_fmt")
+        .arg("bgr24")
         .arg("-s:v")
-        .arg("1x1")
+        .arg("16x16")
         .arg("-i")
         .arg("pipe:")
         .arg("-f")
         .arg("mp4")
         .arg("-c:v")
         .arg("libx264rgb")
+        .arg("-tune")
+        .arg("zerolatency")
         .arg("-movflags")
         .arg("frag_keyframe+empty_moov")
-        .arg("pipe:1")
+        // .arg("pipe:1")
+        .arg("output/test.mp4")
+        .arg("-y")
         .stdin(Stdio::piped())
         // .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to execute command");
     let mut stdin = test.stdin.take().unwrap();
     std::thread::spawn(move || {
-        stdin
-            .write_all(&[0,255,0])
-            .expect("Failed to write to stdin");
+        for frames in 0..10 {
+        for x in 0..768 {
+            stdin
+                .write_all(&[(frames)*25, 255, 0])
+                .expect("Failed to write to stdin");
+        }
+    }
     });
     let output = test.wait_with_output().unwrap();
 
