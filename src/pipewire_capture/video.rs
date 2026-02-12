@@ -110,44 +110,58 @@ fn attach_audio_listener(
     };
     let mut test = Command::new("ffmpeg")
         .arg("-hide_banner")
-        .arg("-f")
-        .arg("rawvideo")
-        .arg("-pix_fmt")
-        .arg("bgr24")
-        .arg("-s:v")
-        .arg("16x16")
+        // .arg("-f")
+        // .arg("rawvideo")
+        // .arg("-pix_fmt")
+        // .arg("bgr24")
+        // .arg("-s:v")
+        // .arg("1280x720")
+        // .arg("-r")
+        // .arg("30")
         .arg("-i")
-        .arg("pipe:")
+        .arg("output/i-guess-bro.mp4")
         .arg("-f")
         .arg("mp4")
+        .arg("-vaapi_device")
+        .arg("/dev/dri/renderD128")
+        .arg("-vf")
+        .arg("format=nv12,hwupload")
         .arg("-c:v")
-        .arg("libx264rgb")
-        .arg("-tune")
-        .arg("zerolatency")
-        .arg("-movflags")
-        .arg("frag_keyframe+empty_moov")
-        .arg("pipe:1")
-        // .arg("output/test.mp4")
+        .arg("h264_vaapi")
+        .arg("-b:v")
+        .arg("1M")
+        // .arg("-crf")
+        // .arg("28")
+        // .arg("-preset")
+        // .arg("ultrafast")
+        // .arg("-tune")
+        // .arg("zerolatency")
+        // .arg("-movflags")
+        // .arg("frag_keyframe+empty_moov")
+        // .arg("pipe:1")
+        .arg("output/test.mp4")
         .arg("-y")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to execute command");
     let mut stdin = test.stdin.take().unwrap();
-    std::thread::spawn(move || {
-        for frames in 0..10 {
-            for x in 0..768 {
-                stdin
-                    .write_all(&[(frames) * 25, 255, 0])
-                    .expect("Failed to write to stdin");
-            }
-        }
-    });
+    // std::thread::spawn(move || {
+    //     for frames in 0..30*30 {
+    //         for x in 0..2073600 {
+    //             stdin
+    //                 .write_all(&[(frames % 150) as u8, 255, 0])
+    //                 .expect("Failed to write to stdin");
+    //         }
+    //     }
+    //     dbg!("i executed in the child thread!");
+    // });
+    dbg!("i executed in the parent thread!");
     let output = test.wait_with_output().unwrap();
     let path = Path::new("output/testes.mp4");
     let mut file = File::create(path).unwrap();
     file.write_all(&output.stdout).unwrap();
-    println!("{:?}", &output.stdout);
+    // println!("{:?}", &output.stdout);
 
     let listener = stream
         .add_local_listener_with_user_data(video_data)
