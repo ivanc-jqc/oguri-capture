@@ -17,7 +17,7 @@ use ringbuf::traits::{Consumer, Producer, Split};
 
 use std::error::Error;
 use std::fs::File;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::{mem, num};
@@ -119,7 +119,7 @@ fn attach_audio_listener(
         .arg("-r")
         .arg("30")
         .arg("-i")
-        .arg("pipe:")
+        .arg("pipe:0")
         .arg("-f")
         .arg("mp4")
         .arg("-vaapi_device")
@@ -138,18 +138,33 @@ fn attach_audio_listener(
         // .arg("ultrafast")
         // .arg("-tune")
         // .arg("zerolatency")
+        .arg("-f")
+        .arg("mpegts")
         // .arg("-movflags")
         // .arg("frag_keyframe+empty_moov")
-        // .arg("pipe:1")
-        .arg("output/test.mp4")
+        .arg("pipe:1")
+        // .arg("output/test.mp4")
         .arg("-y")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to execute command");
     let mut stdin = test.stdin.take().unwrap();
+    let mut output = test.stdout.take().unwrap();
+    std::thread::spawn(move || {
+        let mut buffer = [0u8; 8192*4];
+        loop {
+        match output.read(&mut buffer) { 
+            Ok(n) => {
+                dbg!(n);
+            },
+            Err(err) => println!("{}",err),
+        }
+    }
+    });
 
-    
+
+
     let listener = stream
         .add_local_listener_with_user_data(video_data)
         .state_changed(|_, _, old, new| {
@@ -205,9 +220,10 @@ fn attach_audio_listener(
                 let size = data.chunk().size() as usize;
                 let bytes = data.data().unwrap();
                 // dbg!(size);
-                stdin
-                            .write_all(&bytes)
-                            .expect("Failed to write to stdin");
+                stdin.write_all(&bytes).expect("Failed to write to stdin");
+                let mut temp = [0u8; 1920*1080]; 
+
+                // println!("{:?}", &bytes);
                 // for frames in 0..30 * 30 {
                 //     for x in 0..2073600 {
                 //         stdin
@@ -220,11 +236,10 @@ fn attach_audio_listener(
             }
         })
         .register()?;
-    // let output = test.wait_with_output().unwrap();
+
     // let path = Path::new("output/testes.mp4");
     // let mut file = File::create(path).unwrap();
     // file.write_all(&output.stdout).unwrap();
-    // println!("{:?}", &output.stdout);
 
     Ok(listener)
 }
