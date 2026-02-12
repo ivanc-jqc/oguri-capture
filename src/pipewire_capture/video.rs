@@ -110,16 +110,16 @@ fn attach_audio_listener(
     };
     let mut test = Command::new("ffmpeg")
         .arg("-hide_banner")
-        // .arg("-f")
-        // .arg("rawvideo")
-        // .arg("-pix_fmt")
-        // .arg("bgr24")
-        // .arg("-s:v")
-        // .arg("1280x720")
-        // .arg("-r")
-        // .arg("30")
+        .arg("-f")
+        .arg("rawvideo")
+        .arg("-pix_fmt")
+        .arg("bgr24")
+        .arg("-s:v")
+        .arg("1920x1080")
+        .arg("-r")
+        .arg("30")
         .arg("-i")
-        .arg("output/i-guess-bro.mp4")
+        .arg("pipe:")
         .arg("-f")
         .arg("mp4")
         .arg("-vaapi_device")
@@ -146,16 +146,16 @@ fn attach_audio_listener(
         .spawn()
         .expect("Failed to execute command");
     let mut stdin = test.stdin.take().unwrap();
-    // std::thread::spawn(move || {
-    //     for frames in 0..30*30 {
-    //         for x in 0..2073600 {
-    //             stdin
-    //                 .write_all(&[(frames % 150) as u8, 255, 0])
-    //                 .expect("Failed to write to stdin");
-    //         }
-    //     }
-    //     dbg!("i executed in the child thread!");
-    // });
+    std::thread::spawn(move || {
+        for frames in 0..30*30 {
+            for x in 0..2073600/4 {
+                stdin
+                    .write_all(&[(frames % 150) as u8, 255, 0,0,0,0,0,0,0,0,0,0])
+                    .expect("Failed to write to stdin");
+            }
+        }
+        dbg!("i executed in the child thread!");
+    });
     dbg!("i executed in the parent thread!");
     let output = test.wait_with_output().unwrap();
     let path = Path::new("output/testes.mp4");
