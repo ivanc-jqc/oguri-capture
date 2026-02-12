@@ -113,7 +113,7 @@ fn attach_audio_listener(
         .arg("-f")
         .arg("rawvideo")
         .arg("-pix_fmt")
-        .arg("bgr24")
+        .arg("bgr0")
         .arg("-s:v")
         .arg("1920x1080")
         .arg("-r")
@@ -128,6 +128,8 @@ fn attach_audio_listener(
         .arg("format=nv12,hwupload")
         .arg("-c:v")
         .arg("h264_vaapi")
+        .arg("-bufsize")
+        .arg("4M")
         .arg("-b:v")
         .arg("1M")
         // .arg("-crf")
@@ -146,23 +148,8 @@ fn attach_audio_listener(
         .spawn()
         .expect("Failed to execute command");
     let mut stdin = test.stdin.take().unwrap();
-    std::thread::spawn(move || {
-        for frames in 0..30*30 {
-            for x in 0..2073600/4 {
-                stdin
-                    .write_all(&[(frames % 150) as u8, 255, 0,0,0,0,0,0,0,0,0,0])
-                    .expect("Failed to write to stdin");
-            }
-        }
-        dbg!("i executed in the child thread!");
-    });
-    dbg!("i executed in the parent thread!");
-    let output = test.wait_with_output().unwrap();
-    let path = Path::new("output/testes.mp4");
-    let mut file = File::create(path).unwrap();
-    file.write_all(&output.stdout).unwrap();
-    // println!("{:?}", &output.stdout);
 
+    
     let listener = stream
         .add_local_listener_with_user_data(video_data)
         .state_changed(|_, _, old, new| {
@@ -199,16 +186,16 @@ fn attach_audio_listener(
             // dbg!(user_data.format);
 
             user_data.format.parse(param).expect("OAJDSOAJDOA");
-            // println!(
-            //     "  size: {}x{}",
-            //     user_data.format.size().width,
-            //     user_data.format.size().height
-            // );
-            // println!(
-            //     "  framerate: {}/{}",
-            //     user_data.format.framerate().num,
-            //     user_data.format.framerate().denom
-            // );
+            println!(
+                "  size: {}x{}",
+                user_data.format.size().width,
+                user_data.format.size().height
+            );
+            println!(
+                "  framerate: {}/{}",
+                user_data.format.framerate().num,
+                user_data.format.framerate().denom
+            );
         })
         .process(move |stream, video_data| match stream.dequeue_buffer() {
             None => println!("No buffer received"),
@@ -217,10 +204,28 @@ fn attach_audio_listener(
                 let mut data = &mut datas[0];
                 let size = data.chunk().size() as usize;
                 let bytes = data.data().unwrap();
-                prod.push_slice(&bytes[0..size]);
+                // dbg!(size);
+                stdin
+                            .write_all(&bytes)
+                            .expect("Failed to write to stdin");
+                // for frames in 0..30 * 30 {
+                //     for x in 0..2073600 {
+                //         stdin
+                //             .write_all(&[(frames % 150) as u8, 255, 0, 0, 0])
+                //             .expect("Failed to write to stdin");
+                //     }
+                //     print!("hi");
+                // }
+                // prod.push_slice(&bytes[0..size]);
             }
         })
         .register()?;
+    // let output = test.wait_with_output().unwrap();
+    // let path = Path::new("output/testes.mp4");
+    // let mut file = File::create(path).unwrap();
+    // file.write_all(&output.stdout).unwrap();
+    // println!("{:?}", &output.stdout);
+
     Ok(listener)
 }
 //probably turn these into traits
