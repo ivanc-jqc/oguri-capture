@@ -20,6 +20,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex};
 use std::{mem, num};
 
 pub const FRAME_RATE: u64 = 60;
@@ -128,8 +129,8 @@ fn attach_audio_listener(
         .arg("format=nv12,hwupload")
         .arg("-c:v")
         .arg("h264_vaapi")
-        .arg("-bufsize")
-        .arg("4M")
+        // .arg("-bufsize")
+        // .arg("4M")
         .arg("-b:v")
         .arg("1M")
         // .arg("-crf")
@@ -149,14 +150,23 @@ fn attach_audio_listener(
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to execute command");
-    let mut stdin = test.stdin.take().unwrap();
+    let mut stdin = Arc::new(Mutex::new( test.stdin.take().unwrap()));
     let mut output = test.stdout.take().unwrap();
+    let id = test.id();
+     std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_secs(5));
+        let x = stdin.clone().lock().unwrap();
+        let bruh = *x;
+    });
     std::thread::spawn(move || {
-        let mut buffer = [0u8; 8192*4];
+        let path = Path::new("output/testes.m2t");
+    let mut file = File::create(path).unwrap();
+        let mut buffer = [0u8; 1024];
+
         loop {
         match output.read(&mut buffer) { 
             Ok(n) => {
-                dbg!(n);
+                file.write_all(&buffer);
             },
             Err(err) => println!("{}",err),
         }
@@ -221,8 +231,6 @@ fn attach_audio_listener(
                 let bytes = data.data().unwrap();
                 // dbg!(size);
                 stdin.write_all(&bytes).expect("Failed to write to stdin");
-                let mut temp = [0u8; 1920*1080]; 
-
                 // println!("{:?}", &bytes);
                 // for frames in 0..30 * 30 {
                 //     for x in 0..2073600 {
@@ -237,8 +245,7 @@ fn attach_audio_listener(
         })
         .register()?;
 
-    // let path = Path::new("output/testes.mp4");
-    // let mut file = File::create(path).unwrap();
+    
     // file.write_all(&output.stdout).unwrap();
 
     Ok(listener)
