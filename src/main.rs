@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::{collections::HashMap, error::Error, os::fd::OwnedFd, sync::mpsc};
-use screencast::ScreenCastSession;
-use screencast::signals::listener_stream;
+use xdg_desktop_portal::ScreenCastSession;
+use xdg_desktop_portal::signals::listener_stream;
 use std::thread;
 use futures_util::stream::StreamExt;
 use zbus::{Connection, Message};
@@ -77,7 +77,7 @@ fn parse_streams<'a>(unparsed_streams: &'a HashMap<String,OwnedValue>) -> u32{
     pw_node_id
 }
 
-mod screencast;
+mod xdg_desktop_portal;
 mod pipewire_capture;
 mod circular_buffer;
 #[cfg(test)]

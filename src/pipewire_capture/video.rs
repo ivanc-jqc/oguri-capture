@@ -155,8 +155,8 @@ fn attach_audio_listener(
     let id = test.id();
      std::thread::spawn(move || {
         std::thread::sleep(std::time::Duration::from_secs(5));
-        let x = stdin.clone().lock().unwrap();
-        let bruh = *x;
+        // let x = stdin.clone().lock().unwrap();
+        // let bruh = *x;
     });
     std::thread::spawn(move || {
         let path = Path::new("output/testes.m2t");
@@ -230,7 +230,7 @@ fn attach_audio_listener(
                 let size = data.chunk().size() as usize;
                 let bytes = data.data().unwrap();
                 // dbg!(size);
-                stdin.write_all(&bytes).expect("Failed to write to stdin");
+                // stdin.write_all(&bytes).expect("Failed to write to stdin");
                 // println!("{:?}", &bytes);
                 // for frames in 0..30 * 30 {
                 //     for x in 0..2073600 {
