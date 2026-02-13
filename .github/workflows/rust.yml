@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Prereqs
+      run: sudo apt-get install libpipewire-0.3
     - name: Build
       run: cargo build
     - name: Run tests
