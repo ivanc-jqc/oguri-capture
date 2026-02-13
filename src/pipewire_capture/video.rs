@@ -117,18 +117,22 @@ fn attach_audio_listener(
         .arg("bgr0")
         .arg("-s:v")
         .arg("1920x1080")
-        .arg("-r")
-        .arg("30")
+        // .arg("-r")
+        // .arg("10")
         .arg("-i")
         .arg("pipe:0")
-        .arg("-f")
-        .arg("mp4")
         .arg("-vaapi_device")
         .arg("/dev/dri/renderD128")
         .arg("-vf")
         .arg("format=nv12,hwupload")
         .arg("-c:v")
         .arg("h264_vaapi")
+        // .arg("-x264opts")
+        // .arg("keyint=24:min-keyint=24:no-scenecut")
+        .arg("-g")
+        .arg("99999999")
+        // .arg("-sc_threshold")
+        // .arg("0")
         // .arg("-bufsize")
         // .arg("4M")
         .arg("-b:v")
@@ -144,36 +148,41 @@ fn attach_audio_listener(
         // .arg("-movflags")
         // .arg("frag_keyframe+empty_moov")
         .arg("pipe:1")
-        // .arg("output/test.mp4")
+        // .arg("output/test.m2t")
         .arg("-y")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to execute command");
-    let mut stdin = Arc::new(Mutex::new( test.stdin.take().unwrap()));
+    let mut stdin = test.stdin.take().unwrap();
     let mut output = test.stdout.take().unwrap();
-    let id = test.id();
-     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_secs(5));
-        // let x = stdin.clone().lock().unwrap();
-        // let bruh = *x;
-    });
+    // let id = test.id();
+    //  std::thread::spawn(move || {
+    //     std::thread::sleep(std::time::Duration::from_secs(5));
+    //     // let x = stdin.clone().lock().unwrap();
+    //     // let bruh = *x;
+    // });
     std::thread::spawn(move || {
         let path = Path::new("output/testes.m2t");
-    let mut file = File::create(path).unwrap();
-        let mut buffer = [0u8; 1024];
+        let mut file = File::create(path).unwrap();
+        let mut x = 0;
+        let mut buffer = [0u8; 1024 * 16];
 
         loop {
-        match output.read(&mut buffer) { 
-            Ok(n) => {
-                file.write_all(&buffer);
-            },
-            Err(err) => println!("{}",err),
+            match output.read(&mut buffer) {
+                Ok(n) => {
+                    // if (n > 7000) {
+                    //     x += 1;
+                    //     dbg!(x);
+                    //     dbg!(n);
+                    // }
+                    dbg!(n);
+                    // file.write_all(&buffer);
+                }
+                Err(err) => println!("{}", err),
+            }
         }
-    }
     });
-
-
 
     let listener = stream
         .add_local_listener_with_user_data(video_data)
@@ -230,7 +239,7 @@ fn attach_audio_listener(
                 let size = data.chunk().size() as usize;
                 let bytes = data.data().unwrap();
                 // dbg!(size);
-                // stdin.write_all(&bytes).expect("Failed to write to stdin");
+                stdin.write_all(&bytes).expect("Failed to write to stdin");
                 // println!("{:?}", &bytes);
                 // for frames in 0..30 * 30 {
                 //     for x in 0..2073600 {
@@ -245,7 +254,6 @@ fn attach_audio_listener(
         })
         .register()?;
 
-    
     // file.write_all(&output.stdout).unwrap();
 
     Ok(listener)
