@@ -20,7 +20,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 use std::{mem, num};
 
 pub const FRAME_RATE: u64 = 60;
@@ -38,7 +38,7 @@ pub struct Video {
 }
 impl Video {
     pub fn new(video_core: CoreRc, node_id: u32) -> Self {
-        let temp = HeapRb::<u8>::new((WINDOW_SIZE).try_into().unwrap());
+        let temp = HeapRb::<u8>::new(((1*1000*1000/8)*CLIP_DURATION).try_into().unwrap());
         let video_stream = create_video_stream(video_core.clone()).unwrap();
         let (mut prod, mut cons) = temp.split();
         let listener = attach_audio_listener(video_stream.clone(), prod).unwrap();
@@ -129,8 +129,8 @@ fn attach_audio_listener(
         .arg("h264_vaapi")
         // .arg("-x264opts")
         // .arg("keyint=24:min-keyint=24:no-scenecut")
-        .arg("-g")
-        .arg("99999999")
+        // .arg("-g")
+        // .arg("99999999")
         // .arg("-sc_threshold")
         // .arg("0")
         // .arg("-bufsize")
@@ -162,11 +162,17 @@ fn attach_audio_listener(
     //     // let x = stdin.clone().lock().unwrap();
     //     // let bruh = *x;
     // });
+    let (sender,reciever) = mpsc::channel::<Vec<u8>>();
+    std::thread::spawn(move || {
+        for x in reciever {
+            stdin.write(x.as_slice()).unwrap();
+        }
+    });
     std::thread::spawn(move || {
         let path = Path::new("output/testes.m2t");
         let mut file = File::create(path).unwrap();
         let mut x = 0;
-        let mut buffer = [0u8; 1024 * 16];
+        let mut buffer = [0u8; 1024 * 64];
 
         loop {
             match output.read(&mut buffer) {
@@ -176,8 +182,8 @@ fn attach_audio_listener(
                     //     dbg!(x);
                     //     dbg!(n);
                     // }
-                    dbg!(n);
-                    // file.write_all(&buffer);
+                    // dbg!(n);
+                    file.write_all(&buffer);
                 }
                 Err(err) => println!("{}", err),
             }
@@ -238,9 +244,12 @@ fn attach_audio_listener(
                 let mut data = &mut datas[0];
                 let size = data.chunk().size() as usize;
                 let bytes = data.data().unwrap();
+                let x = bytes.to_vec();
                 // dbg!(size);
-                stdin.write_all(&bytes).expect("Failed to write to stdin");
-                // println!("{:?}", &bytes);
+                sender.send(x).unwrap();
+                // stdin.write_all(&bytes).expect("Failed to write to stdin");
+                // output.read(&mut temp);
+                // println!("{:?}", &temp);
                 // for frames in 0..30 * 30 {
                 //     for x in 0..2073600 {
                 //         stdin
@@ -249,7 +258,7 @@ fn attach_audio_listener(
                 //     }
                 //     print!("hi");
                 // }
-                // prod.push_slice(&bytes[0..size]);
+                prod.push_slice(&bytes[0..size]);
             }
         })
         .register()?;
