@@ -1,16 +1,12 @@
-use std::path::Path;
-use std::{collections::HashMap, error::Error, os::fd::OwnedFd, sync::mpsc};
+use std::{collections::HashMap, error::Error, os::fd::OwnedFd};
 use xdg_desktop_portal::ScreenCastSession;
 use xdg_desktop_portal::signals::listener_stream;
-use std::thread;
+use std::{io, thread};
 use futures_util::stream::StreamExt;
 use zbus::{Connection, Message};
 use zbus::zvariant::{Structure,  Array, OwnedValue};
-use std::time::{Duration, Instant};
 use pipewire_capture::PipewireManager;
 use pipewire_capture::TERMINATE;
-use std::io::{self, Write};
-use std::fs::File;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -54,9 +50,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
     
     let mut buffer = String::new();
-    io::stdin().read_line(&mut buffer);
+    io::stdin().read_line(&mut buffer).unwrap();
     // thread::sleep(Duration::from_secs(40));
-    pw_tx.send(TERMINATE);
+    let _ = pw_tx.send(TERMINATE);
     // thread::sleep(Duration::from_secs(10));
     dbg!(buffer);
     _pw_thread.join().unwrap();

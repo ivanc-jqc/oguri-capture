@@ -172,10 +172,11 @@ fn attach_audio_listener(
         let path = Path::new("output/testes.m2t");
         let mut file = File::create(path).unwrap();
         let mut x = 0;
-        let mut buffer = [0u8; 1024 * 64];
+        let mut buffer = [0u8; 188*10];
 
         loop {
             match output.read(&mut buffer) {
+
                 Ok(n) => {
                     // if (n > 7000) {
                     //     x += 1;
@@ -183,6 +184,7 @@ fn attach_audio_listener(
                     //     dbg!(n);
                     // }
                     // dbg!(n);
+                    
                     file.write_all(&buffer);
                 }
                 Err(err) => println!("{}", err),

@@ -10,7 +10,6 @@ pub const XDG_SESSION_PATH: &str = "/org/freedesktop/portal/desktop/session/";
 
 
 pub struct ScreenCastSession<'oguri> {
-    pub connection: &'oguri Connection,
     pub sender_id: String,
     pub session_handle: ObjectPath<'oguri>,
     proxy: ScreenCastProxy<'oguri>,
@@ -24,7 +23,6 @@ impl<'oguri> ScreenCastSession<'oguri> {
         )?;
 
         Ok(Self {
-            connection: con,
             sender_id: id,
             session_handle: session_handle,
             proxy: prox,
