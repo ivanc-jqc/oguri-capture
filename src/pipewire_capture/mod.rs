@@ -10,18 +10,18 @@ use std::time::Duration;
 use video::Video;
 
 use crate::main;
-pub struct PipewireManager {
+pub struct PipewireManager<'a> {
     main_loop: MainLoopRc,
     context: ContextRc,
     registry: RegistryRc,
     registry_listener: registry::Listener,
-
+    attached_receiver: Option<AttachedReceiver<'a,TERMINATE>>,
     pub audio: Audio,
     pub video: Video,
 }
 pub struct TERMINATE;
 
-impl PipewireManager {
+impl<'a> PipewireManager<'a> {
     pub fn new(fd: OwnedFd, node_id: u32) -> Self {
         let mainloop = MainLoopRc::new(None).unwrap();
         
@@ -41,16 +41,17 @@ impl PipewireManager {
             context: context,
             registry: registry,
             registry_listener: reg_listener,
+            attached_receiver: None,
             audio: Audio::new(audio_core),
             video: Video::new(video_core, node_id),
         }
     }
-    // pub fn attach_receiver(&self,pw_rx:) {
+    // pub fn attach_receiver(&mut'a self,pw_rx: channel::Receiver<TERMINATE>){
     //     let receiver = pw_rx.attach(self.main_loop.loop_(), {
     //         let main_loop = self.main_loop.clone();
     //         move |_| main_loop.quit()
     //     });
-    //     self.attached_receiver.replace(Some(receiver));
+    //     self.attached_receiver = Some(receiver);
     // }
     pub fn run(&self, pw_rx: channel::Receiver<TERMINATE>) -> Result<(), Box<dyn Error>> {
         let receiver = pw_rx.attach(self.main_loop.loop_(), {

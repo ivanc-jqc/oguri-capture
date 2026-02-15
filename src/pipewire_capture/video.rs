@@ -165,7 +165,7 @@ fn attach_audio_listener(
     let (sender,reciever) = mpsc::channel::<Vec<u8>>();
     std::thread::spawn(move || {
         for x in reciever {
-            stdin.write(x.as_slice()).unwrap();
+            stdin.write_all(x.as_slice()).unwrap();
         }
     });
     std::thread::spawn(move || {

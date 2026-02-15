@@ -12,7 +12,7 @@ use pipewire_capture::TERMINATE;
 async fn main() -> Result<(), Box<dyn Error>> {
     let connection = Connection::session().await?;
     let sc = ScreenCastSession::new(&connection).await?;
-    let (pw_tx, pw_rx) = pipewire::channel::channel();
+    
 
     
     sc.select_sources().await?;
@@ -23,6 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let pw_fd: OwnedFd = sc.get_pipewire_fd().await?;
     let node_id: u32 = parse_streams(&(parse_message(pw_streams)));
 
+    let (pw_tx, pw_rx) = pipewire::channel::channel();
     let _pw_thread = thread::spawn(move|| {
         let mut pw_man = PipewireManager::new(pw_fd,node_id);
         pw_man.run(pw_rx).unwrap();
