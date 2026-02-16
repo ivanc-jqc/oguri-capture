@@ -6,7 +6,7 @@ use futures_util::stream::StreamExt;
 use zbus::{Connection, Message};
 use zbus::zvariant::{Structure,  Array, OwnedValue};
 use pipewire_capture::PipewireManager;
-use pipewire_capture::TERMINATE;
+use pipewire_capture::StreamCommand;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -51,9 +51,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
     
     let mut buffer = String::new();
+    loop {
     io::stdin().read_line(&mut buffer).unwrap();
     // thread::sleep(Duration::from_secs(40));
-    let _ = pw_tx.send(TERMINATE);
+    let _ = pw_tx.send(StreamCommand::Terminate);
+    }
     // thread::sleep(Duration::from_secs(10));
     dbg!(buffer);
     _pw_thread.join().unwrap();

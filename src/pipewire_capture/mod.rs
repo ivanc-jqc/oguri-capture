@@ -19,6 +19,10 @@ pub struct PipewireManager<'a> {
     pub audio: Audio,
     pub video: Video,
 }
+pub enum StreamCommand {
+    Terminate,
+    // Disconnect,
+}
 pub struct TERMINATE;
 
 impl<'a> PipewireManager<'a> {
@@ -53,10 +57,15 @@ impl<'a> PipewireManager<'a> {
     //     });
     //     self.attached_receiver = Some(receiver);
     // }
-    pub fn run(&self, pw_rx: channel::Receiver<TERMINATE>) -> Result<(), Box<dyn Error>> {
-        let receiver = pw_rx.attach(self.main_loop.loop_(), {
+    pub fn run(&self, pw_rx: channel::Receiver<StreamCommand>) -> Result<(), Box<dyn Error>> {
+        let _receiver = pw_rx.attach(self.main_loop.loop_(), {
             let main_loop = self.main_loop.clone();
-            move |_| main_loop.quit()
+            move |cmd| match cmd {
+                StreamCommand::Terminate => {
+                    dbg!("hi from receiver!");
+                    // main_loop.quit();
+                }
+            }
         });
         self.main_loop.run();
         Ok(())
