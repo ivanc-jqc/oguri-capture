@@ -21,7 +21,7 @@ pub struct PipewireManager<'a> {
 }
 pub enum StreamCommand {
     Terminate,
-    // Disconnect,
+    Disconnect,
 }
 pub struct TERMINATE;
 
@@ -60,10 +60,14 @@ impl<'a> PipewireManager<'a> {
     pub fn run(&self, pw_rx: channel::Receiver<StreamCommand>) -> Result<(), Box<dyn Error>> {
         let _receiver = pw_rx.attach(self.main_loop.loop_(), {
             let main_loop = self.main_loop.clone();
+            let stream = self.video.video_streams[0].clone();
             move |cmd| match cmd {
+                StreamCommand::Disconnect => {
+                    stream.set_active(false).unwrap();
+                }
                 StreamCommand::Terminate => {
-                    dbg!("hi from receiver!");
-                    // main_loop.quit();
+                    // dbg!("hi from receiver!");
+                    main_loop.quit();
                 }
             }
         });

@@ -54,8 +54,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     loop {
     io::stdin().read_line(&mut buffer).unwrap();
     // thread::sleep(Duration::from_secs(40));
-    let _ = pw_tx.send(StreamCommand::Terminate);
+    if &buffer.trim() == &"q" {
+        break;
+    } 
+    dbg!(&buffer);
+    buffer.clear();
+    let _ = pw_tx.send(StreamCommand::Disconnect);
     }
+    let _ = pw_tx.send(StreamCommand::Terminate);
     // thread::sleep(Duration::from_secs(10));
     dbg!(buffer);
     _pw_thread.join().unwrap();

@@ -10,10 +10,11 @@ use pipewire::spa::{
     pod::{Object, Pod},
     utils::Direction,
 };
-use pipewire::stream::{StreamFlags, StreamListener, StreamRc};
+use pipewire::stream::{StreamFlags, StreamListener, StreamRc, StreamState};
 
 use ringbuf::HeapRb;
 use ringbuf::traits::{Consumer, Producer, Split};
+use zbus::zvariant::Str;
 
 use std::error::Error;
 use std::fs::File;
@@ -32,13 +33,13 @@ pub struct VideoData {
 }
 pub struct Video {
     video_core: CoreRc,
-    video_streams: Vec<StreamRc>,
+    pub video_streams: Vec<StreamRc>,
     audio_listeners: Vec<StreamListener<VideoData>>,
     pub audio_buffer_cons: ringbuf::HeapCons<u8>,
 }
 impl Video {
     pub fn new(video_core: CoreRc, node_id: u32) -> Self {
-        let temp = HeapRb::<u8>::new(((1*1000*1000/8)*CLIP_DURATION).try_into().unwrap());
+        let temp = HeapRb::<u8>::new(((1 * 1000 * 1000 / 8) * CLIP_DURATION).try_into().unwrap());
         let video_stream = create_video_stream(video_core.clone()).unwrap();
         let (mut prod, mut cons) = temp.split();
         let listener = attach_audio_listener(video_stream.clone(), prod).unwrap();
@@ -111,6 +112,8 @@ fn attach_audio_listener(
     };
     let mut test = Command::new("ffmpeg")
         .arg("-hide_banner")
+        // .arg("-loglevel")
+        // .arg("error")
         .arg("-f")
         .arg("rawvideo")
         .arg("-pix_fmt")
@@ -154,7 +157,7 @@ fn attach_audio_listener(
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to execute command");
-    let mut stdin = test.stdin.take().unwrap();
+    let mut stdin = Mutex::new(test.stdin.take().unwrap());
     let mut output = test.stdout.take().unwrap();
     // let id = test.id();
     //  std::thread::spawn(move || {
@@ -162,21 +165,35 @@ fn attach_audio_listener(
     //     // let x = stdin.clone().lock().unwrap();
     //     // let bruh = *x;
     // });
-    let (sender,reciever) = mpsc::channel::<Vec<u8>>();
+    let (sender, reciever) = mpsc::channel::<Vec<u8>>();
+    let ffmpeg_sender = sender.clone();
+
     std::thread::spawn(move || {
+        let term_sig = String::from("SIGTERM");
         for x in reciever {
-            stdin.write_all(x.as_slice()).unwrap();
+            if x.len() < 8 {
+                // match x {
+                //     Ok(x) => {
+                //         drop(stdin);
+                //         break;
+                //     }
+                //     Err(err) => {
+                //         ()
+                //     }
+                // }
+            }
+
+            stdin.get_mut().unwrap().write_all(x.as_slice()).unwrap();
         }
     });
     std::thread::spawn(move || {
         let path = Path::new("output/testes.m2t");
         let mut file = File::create(path).unwrap();
         let mut x = 0;
-        let mut buffer = [0u8; 188*10];
+        let mut buffer = [0u8; 188 * 10];
 
         loop {
             match output.read(&mut buffer) {
-
                 Ok(n) => {
                     // if (n > 7000) {
                     //     x += 1;
@@ -184,7 +201,7 @@ fn attach_audio_listener(
                     //     dbg!(n);
                     // }
                     // dbg!(n);
-                    
+
                     file.write_all(&buffer);
                 }
                 Err(err) => println!("{}", err),
@@ -194,8 +211,15 @@ fn attach_audio_listener(
 
     let listener = stream
         .add_local_listener_with_user_data(video_data)
-        .state_changed(|_, _, old, new| {
+        .state_changed(move |_, _, old, new| {
             println!("State changed: {:?} -> {:?}", old, new);
+            match new {
+                StreamState::Paused => {
+                    dbg!("WROTE");
+                    ffmpeg_sender.send("SIGTERM".as_bytes().to_vec()).unwrap();
+                }
+                _ => (),
+            }
         })
         .param_changed(|stream, user_data, id, param| {
             let Some(param) = param else {
@@ -248,7 +272,14 @@ fn attach_audio_listener(
                 let bytes = data.data().unwrap();
                 let x = bytes.to_vec();
                 // dbg!(size);
-                sender.send(x).unwrap();
+                match sender.send(x) {
+                    Ok(ok) => {
+                        ()
+                    }
+                    Err(err) => {
+                        dbg!(err);
+                    }
+                }
                 // stdin.write_all(&bytes).expect("Failed to write to stdin");
                 // output.read(&mut temp);
                 // println!("{:?}", &temp);
